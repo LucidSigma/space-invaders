@@ -10,7 +10,8 @@ use sdl2::{
     event::Event,
     keyboard::{KeyboardState, Scancode},
     mouse::{MouseButton, MouseState},
-    render::WindowCanvas,
+    render::{TextureCreator, WindowCanvas},
+    video::WindowContext,
     EventPump, Sdl, VideoSubsystem,
 };
 
@@ -21,6 +22,7 @@ const CONFIG_FILE_NAME: &str = "config/config.json";
 struct Config {
     window_title: String,
     window_size: (u32, u32),
+    enable_vsync: bool,
 }
 
 pub fn play(initial_scene: Box<dyn Scene>) {
@@ -28,8 +30,6 @@ pub fn play(initial_scene: Box<dyn Scene>) {
 
     let (sdl_context, video_subsystem) = initialise_sdl().unwrap();
     let mut canvas = initialise_canvas(&video_subsystem, &config).unwrap();
-
-    let texture_creator = canvas.texture_creator();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     play_loop(initial_scene, &mut canvas, &mut event_pump);
@@ -45,6 +45,7 @@ fn read_config_file() -> Result<Config, Box<dyn Error>> {
             config_data["window"]["size"]["x"].as_u64().unwrap() as u32,
             config_data["window"]["size"]["y"].as_u64().unwrap() as u32,
         ),
+        enable_vsync: config_data["enable-vsync"].as_bool().unwrap(),
     })
 }
 
@@ -69,15 +70,21 @@ fn initialise_canvas(
         .allow_highdpi()
         .build()?;
 
-    let canvas = window.into_canvas().accelerated().present_vsync().build()?;
+    let canvas = if config.enable_vsync {
+        window.into_canvas().accelerated().present_vsync().build()?
+    } else {
+        window.into_canvas().accelerated().build()?
+    };
 
     Ok(canvas)
 }
 
 fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pump: &mut EventPump) {
+    let texture_creator = canvas.texture_creator();
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
+
     let mut current_scene = initial_scene;
-    current_scene.on_load();
+    current_scene.on_load(&texture_creator);
 
     let mut ticks_count = Instant::now();
     let mut is_running = true;
@@ -88,7 +95,12 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
 
     while is_running {
         let delta_time = calculate_delta_time(&mut ticks_count);
-        poll_events(event_pump, &mut is_running, &mut mouse_y_scroll_amount);
+        poll_events(
+            &mut current_scene,
+            event_pump,
+            &mut is_running,
+            &mut mouse_y_scroll_amount,
+        );
 
         process_input(
             &mut current_scene,
@@ -106,7 +118,12 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
         previous_mouse_buttons = input::update_mouse_button_state(&event_pump.mouse_state());
         mouse_y_scroll_amount = 0;
 
-        update_scene_queue(&mut current_scene, &mut scene_queue, &mut is_running);
+        update_scene_queue(
+            &mut current_scene,
+            &mut scene_queue,
+            &texture_creator,
+            &mut is_running,
+        );
     }
 }
 
@@ -119,7 +136,12 @@ fn calculate_delta_time(ticks_count: &mut Instant) -> f32 {
     delta_time
 }
 
-fn poll_events(event_pump: &mut EventPump, is_running: &mut bool, mouse_y_scroll_amount: &mut i32) {
+fn poll_events(
+    current_scene: &mut Box<dyn Scene>,
+    event_pump: &mut EventPump,
+    is_running: &mut bool,
+    mouse_y_scroll_amount: &mut i32,
+) {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. } => {
@@ -130,6 +152,8 @@ fn poll_events(event_pump: &mut EventPump, is_running: &mut bool, mouse_y_scroll
             }
             _ => {}
         }
+
+        current_scene.poll_event(event);
     }
 }
 
@@ -181,6 +205,7 @@ fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas) {
 fn update_scene_queue(
     current_scene: &mut Box<dyn Scene>,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
+    texture_creator: &TextureCreator<WindowContext>,
     is_running: &mut bool,
 ) {
     if current_scene.is_done() {
@@ -188,7 +213,7 @@ fn update_scene_queue(
 
         if !scene_queue.is_empty() {
             *current_scene = scene_queue.pop_front().unwrap();
-            current_scene.on_load();
+            current_scene.on_load(texture_creator);
         } else {
             *is_running = false;
         }
