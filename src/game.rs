@@ -10,7 +10,7 @@ use sdl2::{
     image::LoadTexture,
     keyboard::{KeyboardState, Scancode},
     mouse::{MouseButton, MouseState},
-    render::{Texture, WindowCanvas},
+    render::{Texture, TextureCreator, WindowCanvas},
     EventPump, Sdl, VideoSubsystem,
 };
 
@@ -80,15 +80,10 @@ fn initialise_canvas(
 
 fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pump: &mut EventPump) {
     let texture_creator = canvas.texture_creator();
+
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
-
     let mut current_scene = initial_scene;
-    let mut current_scene_textures = current_scene.on_load();
-    let mut textures = vec![];
-
-    for texture_path in current_scene_textures {
-        textures.push(texture_creator.load_texture(texture_path).unwrap());
-    }
+    let mut textures = create_textures(&texture_creator, &current_scene.on_load());
 
     let mut ticks_count = Instant::now();
     let mut is_running = true;
@@ -122,21 +117,16 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
         previous_mouse_buttons = input::update_mouse_button_state(&event_pump.mouse_state());
         mouse_y_scroll_amount = 0;
 
-        if let Some(new_scene_textures) =
+        if let Some(ref new_scene_textures) =
             update_scene_queue(&mut current_scene, &mut scene_queue, &mut is_running)
         {
-            current_scene_textures = new_scene_textures;
-            textures = vec![];
-
-            for texture_path in current_scene_textures {
-                textures.push(texture_creator.load_texture(texture_path).unwrap());
-            }
+            textures = create_textures(&texture_creator, new_scene_textures);
         }
     }
 }
 
 fn calculate_delta_time(ticks_count: &mut Instant) -> f32 {
-    const MICROSECONDS_PER_SECOND: f32 = 1_000_000.0;
+    const MICROSECONDS_PER_SECOND: f32 = 1e6;
 
     let delta_time = (Instant::now() - *ticks_count).as_micros() as f32 / MICROSECONDS_PER_SECOND;
     *ticks_count = Instant::now();
@@ -227,4 +217,17 @@ fn update_scene_queue(
     } else {
         None
     }
+}
+
+fn create_textures<'a>(
+    texture_creator: &'a TextureCreator<sdl2::video::WindowContext>,
+    texture_filepaths: &[String],
+) -> Vec<Texture<'a>> {
+    let mut textures = vec![];
+
+    for texture_path in texture_filepaths {
+        textures.push(texture_creator.load_texture(texture_path).unwrap());
+    }
+
+    textures
 }
