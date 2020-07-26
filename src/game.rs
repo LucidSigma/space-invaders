@@ -108,7 +108,6 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
             (&event_pump.mouse_state(), &previous_mouse_buttons),
             (event_pump.mouse_state().x(), event_pump.mouse_state().y()),
             mouse_y_scroll_amount,
-            &mut is_running,
         );
 
         update(&mut current_scene, delta_time, &mut scene_queue);
@@ -163,7 +162,6 @@ fn process_input(
     mouse_states: (&MouseState, &[MouseButton]),
     mouse_coordinates: (i32, i32),
     mouse_y_scroll_amount: i32,
-    is_running: &mut bool,
 ) {
     let (current_keys, previous_keys) = key_states;
     let (current_mouse_buttons, previous_mouse_buttons) = mouse_states;
@@ -177,10 +175,6 @@ fn process_input(
         (mouse_x, mouse_y),
         mouse_y_scroll_amount,
     );
-
-    if input_state.is_key_down(Scancode::Escape) {
-        *is_running = false;
-    }
 
     current_scene.process_input(&input_state);
 }

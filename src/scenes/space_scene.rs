@@ -9,17 +9,18 @@ use crate::game::scene::Scene;
 
 pub struct SpaceScene {
     offset: f32,
+    is_done: bool,
 }
 
 impl SpaceScene {
     pub fn new() -> SpaceScene {
-        SpaceScene { offset: 0.0 }
+        SpaceScene { offset: 0.0, is_done: false, }
     }
 }
 
 impl Scene for SpaceScene {
     fn is_done(&self) -> bool {
-        false
+        self.is_done
     }
 
     fn background_colour(&self) -> Colour {
@@ -33,8 +34,8 @@ impl Scene for SpaceScene {
     fn poll_event(&mut self, event: sdl2::event::Event) {}
 
     fn process_input(&mut self, input_state: &InputState) {
-        if input_state.is_key_down(sdl2::keyboard::Scancode::Space) {
-            println!("Scene system is working!");
+        if input_state.is_key_down(sdl2::keyboard::Scancode::Escape) {
+            self.is_done = true;
         }
     }
 
