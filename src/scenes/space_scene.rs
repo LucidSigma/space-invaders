@@ -7,6 +7,8 @@ use sdl2::video::WindowContext;
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
 
+const BACKGROUND_COLOUR: Colour = Colour::RGB(230, 230, 230);
+
 pub struct SpaceScene {
     offset: f32,
     has_window_focus: bool,
@@ -34,7 +36,7 @@ impl Scene for SpaceScene {
 
     fn poll_event(&mut self, event: sdl2::event::Event) {
         use sdl2::event::Event::*;
-        use sdl2::event::WindowEvent::*;
+        use sdl2::event::WindowEvent::{Minimized as Minimised, *};
 
         if let Window {
             win_event: window_event,
@@ -42,8 +44,8 @@ impl Scene for SpaceScene {
         } = event
         {
             match window_event {
-                FocusGained => self.has_window_focus = true,
-                FocusLost => self.has_window_focus = false,
+                FocusGained | Restored => self.has_window_focus = true,
+                FocusLost | Minimised => self.has_window_focus = false,
                 _ => (),
             }
         }
@@ -60,7 +62,7 @@ impl Scene for SpaceScene {
             return;
         }
 
-        self.offset += delta_time * 20.0;
+        self.offset += delta_time * 40.0;
     }
 
     fn draw(&mut self, canvas: &mut sdl2::render::WindowCanvas) {
@@ -68,7 +70,7 @@ impl Scene for SpaceScene {
             return;
         }
 
-        canvas.set_draw_color(Colour::RGB(230, 230, 230));
+        canvas.set_draw_color(BACKGROUND_COLOUR);
         canvas.clear();
 
         canvas.set_draw_color(Colour::RGB(0, 0, 0));

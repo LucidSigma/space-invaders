@@ -7,7 +7,6 @@ use std::fs;
 use std::time::Instant;
 
 use sdl2::{
-    event::Event,
     keyboard::{KeyboardState, Scancode},
     mouse::{MouseButton, MouseState},
     render::{TextureCreator, WindowCanvas},
@@ -95,6 +94,7 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
 
     while is_running {
         let delta_time = calculate_delta_time(&mut ticks_count);
+
         poll_events(
             &mut current_scene,
             event_pump,
@@ -141,12 +141,18 @@ fn poll_events(
     is_running: &mut bool,
     mouse_y_scroll_amount: &mut i32,
 ) {
+    use sdl2::event::Event::*;
+    use sdl2::event::WindowEvent::*;
+
     for event in event_pump.poll_iter() {
         match event {
-            Event::Quit { .. } => {
+            Quit { .. }
+            | Window {
+                win_event: Close, ..
+            } => {
                 *is_running = false;
             }
-            Event::MouseWheel { y, .. } => {
+            MouseWheel { y, .. } => {
                 *mouse_y_scroll_amount = y;
             }
             _ => {}
