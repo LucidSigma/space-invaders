@@ -10,7 +10,7 @@ use sdl2::{
     image::LoadTexture,
     keyboard::{KeyboardState, Scancode},
     mouse::{MouseButton, MouseState},
-    render::WindowCanvas,
+    render::{Texture, WindowCanvas},
     EventPump, Sdl, VideoSubsystem,
 };
 
@@ -116,7 +116,7 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
         );
 
         update(&mut current_scene, delta_time, &mut scene_queue);
-        draw(&mut current_scene, canvas);
+        draw(&mut current_scene, canvas, &textures);
 
         previous_keys = input::update_key_state(&event_pump.keyboard_state());
         previous_mouse_buttons = input::update_mouse_button_state(&event_pump.mouse_state());
@@ -202,8 +202,8 @@ fn update(
     current_scene.update(delta_time, scene_queue);
 }
 
-fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas) {
-    current_scene.draw(canvas);
+fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas, textures: &[Texture]) {
+    current_scene.draw(canvas, textures);
 
     canvas.present();
 }

@@ -88,13 +88,25 @@ impl Scene for SpaceScene {
         self.offset += delta_time * 40.0;
     }
 
-    fn draw(&mut self, canvas: &mut sdl2::render::WindowCanvas) {
+    fn draw(
+        &mut self,
+        canvas: &mut sdl2::render::WindowCanvas,
+        textures: &[sdl2::render::Texture],
+    ) {
         if !self.has_window_focus {
             return;
         }
 
         canvas.set_draw_color(BACKGROUND_COLOUR);
         canvas.clear();
+
+        canvas
+            .copy(
+                &textures[self.spaceship_texture_index],
+                sdl2::rect::Rect::new(0, 0, 60, 48),
+                sdl2::rect::Rect::new(0, 0, 1200, 800),
+            )
+            .unwrap();
 
         canvas.set_draw_color(Colour::RGB(0, 0, 0));
         canvas
