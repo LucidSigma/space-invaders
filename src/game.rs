@@ -83,7 +83,8 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
 
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
     let mut current_scene = initial_scene;
-    let mut textures = create_textures(&texture_creator, &current_scene.on_load());
+    let mut textures = create_textures(&texture_creator, &current_scene.on_load(&canvas));
+    current_scene.on_late_load(&canvas, &textures);
 
     let mut ticks_count = Instant::now();
     let mut is_running = true;
@@ -110,17 +111,22 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
             mouse_y_scroll_amount,
         );
 
-        update(&mut current_scene, delta_time, &mut scene_queue);
+        update(&mut current_scene, delta_time, &mut scene_queue, &canvas);
+        late_update(&mut current_scene, delta_time, &mut scene_queue, &canvas);
         draw(&mut current_scene, canvas, &textures);
 
         previous_keys = input::update_key_state(&event_pump.keyboard_state());
         previous_mouse_buttons = input::update_mouse_button_state(&event_pump.mouse_state());
         mouse_y_scroll_amount = 0;
 
-        if let Some(ref new_scene_textures) =
-            update_scene_queue(&mut current_scene, &mut scene_queue, &mut is_running)
-        {
+        if let Some(ref new_scene_textures) = update_scene_queue(
+            &mut current_scene,
+            &mut scene_queue,
+            &canvas,
+            &mut is_running,
+        ) {
             textures = create_textures(&texture_creator, new_scene_textures);
+            current_scene.on_late_load(&canvas, &textures);
         }
     }
 }
@@ -188,8 +194,18 @@ fn update(
     current_scene: &mut Box<dyn Scene>,
     delta_time: f32,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
+    canvas: &WindowCanvas,
 ) {
-    current_scene.update(delta_time, scene_queue);
+    current_scene.update(delta_time, scene_queue, canvas);
+}
+
+fn late_update(
+    current_scene: &mut Box<dyn Scene>,
+    delta_time: f32,
+    scene_queue: &mut VecDeque<Box<dyn Scene>>,
+    canvas: &WindowCanvas,
+) {
+    current_scene.late_update(delta_time, scene_queue, canvas);
 }
 
 fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas, textures: &[Texture]) {
@@ -201,6 +217,7 @@ fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas, textures:
 fn update_scene_queue(
     current_scene: &mut Box<dyn Scene>,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
+    canvas: &WindowCanvas,
     is_running: &mut bool,
 ) -> Option<Vec<String>> {
     if current_scene.is_done() {
@@ -208,7 +225,7 @@ fn update_scene_queue(
 
         if !scene_queue.is_empty() {
             *current_scene = scene_queue.pop_front().unwrap();
-            Some(current_scene.on_load())
+            Some(current_scene.on_load(canvas))
         } else {
             *is_running = false;
 
