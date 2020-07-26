@@ -9,12 +9,17 @@ use crate::game::scene::Scene;
 
 pub struct SpaceScene {
     offset: f32,
+    has_window_focus: bool,
     is_done: bool,
 }
 
 impl SpaceScene {
     pub fn new() -> SpaceScene {
-        SpaceScene { offset: 0.0, is_done: false, }
+        SpaceScene {
+            offset: 0.0,
+            has_window_focus: true,
+            is_done: false,
+        }
     }
 }
 
@@ -23,15 +28,26 @@ impl Scene for SpaceScene {
         self.is_done
     }
 
-    fn background_colour(&self) -> Colour {
-        Colour::RGB(230, 230, 230)
-    }
-
     fn on_load(&mut self, texture_creator: &TextureCreator<WindowContext>) {}
 
     fn on_unload(&mut self) {}
 
-    fn poll_event(&mut self, event: sdl2::event::Event) {}
+    fn poll_event(&mut self, event: sdl2::event::Event) {
+        use sdl2::event::Event::*;
+        use sdl2::event::WindowEvent::*;
+
+        if let Window {
+            win_event: window_event,
+            ..
+        } = event
+        {
+            match window_event {
+                FocusGained => self.has_window_focus = true,
+                FocusLost => self.has_window_focus = false,
+                _ => (),
+            }
+        }
+    }
 
     fn process_input(&mut self, input_state: &InputState) {
         if input_state.is_key_down(sdl2::keyboard::Scancode::Escape) {
@@ -40,11 +56,22 @@ impl Scene for SpaceScene {
     }
 
     fn update(&mut self, delta_time: f32, _scene_queue: &mut VecDeque<Box<dyn Scene>>) {
+        if !self.has_window_focus {
+            return;
+        }
+
         self.offset += delta_time * 20.0;
     }
 
     fn draw(&mut self, canvas: &mut sdl2::render::WindowCanvas) {
-        canvas.set_draw_color(Colour::RGB(0, 255, 0));
+        if !self.has_window_focus {
+            return;
+        }
+
+        canvas.set_draw_color(Colour::RGB(230, 230, 230));
+        canvas.clear();
+
+        canvas.set_draw_color(Colour::RGB(0, 0, 0));
         canvas
             .draw_line(
                 sdl2::rect::Point::new(10 + self.offset as i32, 10 + self.offset as i32),

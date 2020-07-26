@@ -1,6 +1,5 @@
 use std::collections::VecDeque;
 
-use sdl2::pixels::Color as Colour;
 use sdl2::render::TextureCreator;
 use sdl2::video::WindowContext;
 
@@ -8,10 +7,6 @@ use super::input::InputState;
 
 pub trait Scene {
     fn is_done(&self) -> bool;
-
-    fn background_colour(&self) -> Colour {
-        Colour::RGB(0, 0, 0)
-    }
 
     fn on_load(&mut self, texture_creator: &TextureCreator<WindowContext>) {}
     fn on_unload(&mut self) {}

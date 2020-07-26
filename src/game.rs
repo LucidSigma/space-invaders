@@ -188,9 +188,6 @@ fn update(
 }
 
 fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas) {
-    canvas.set_draw_color(current_scene.background_colour());
-    canvas.clear();
-
     current_scene.draw(canvas);
 
     canvas.present();
