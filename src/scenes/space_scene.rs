@@ -1,10 +1,7 @@
 use std::collections::VecDeque;
 use std::fs;
 
-use sdl2::image::LoadTexture;
 use sdl2::pixels::Color as Colour;
-use sdl2::render::{Texture, TextureCreator};
-use sdl2::video::WindowContext;
 
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
@@ -34,22 +31,25 @@ impl Scene for SpaceScene {
         self.is_done
     }
 
-    fn on_load<'a>(
-        &mut self,
-        texture_creator: &'a TextureCreator<WindowContext>,
-    ) -> Vec<Texture<'a>> {
+    fn on_load(&mut self) -> Vec<String> {
         let mut textures = vec![];
 
         for (current_index, texture_file) in fs::read_dir("assets/textures").unwrap().enumerate() {
             let texture_file = texture_file.unwrap();
             let texture_filepath = texture_file.path();
+            let texture_filepath_string = texture_filepath
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
 
-            match texture_filepath.file_name().unwrap().to_str().unwrap() {
+            match texture_filepath_string.as_ref() {
                 "ship.png" => self.spaceship_texture_index = current_index,
                 _ => (),
             }
 
-            textures.push(texture_creator.load_texture(texture_filepath).unwrap());
+            textures.push(texture_filepath.to_str().unwrap().to_owned());
         }
 
         textures

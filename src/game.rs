@@ -7,10 +7,10 @@ use std::fs;
 use std::time::Instant;
 
 use sdl2::{
+    image::LoadTexture,
     keyboard::{KeyboardState, Scancode},
     mouse::{MouseButton, MouseState},
-    render::{Texture, TextureCreator, WindowCanvas},
-    video::WindowContext,
+    render::WindowCanvas,
     EventPump, Sdl, VideoSubsystem,
 };
 
@@ -83,7 +83,12 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
 
     let mut current_scene = initial_scene;
-    let mut current_scene_textures = current_scene.on_load(&texture_creator);
+    let mut current_scene_textures = current_scene.on_load();
+    let mut textures = vec![];
+
+    for texture_path in current_scene_textures {
+        textures.push(texture_creator.load_texture(texture_path).unwrap());
+    }
 
     let mut ticks_count = Instant::now();
     let mut is_running = true;
@@ -117,13 +122,16 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
         previous_mouse_buttons = input::update_mouse_button_state(&event_pump.mouse_state());
         mouse_y_scroll_amount = 0;
 
-        update_scene_queue(
-            &mut current_scene,
-            &mut scene_queue,
-            &texture_creator,
-            &mut current_scene_textures,
-            &mut is_running,
-        );
+        if let Some(new_scene_textures) =
+            update_scene_queue(&mut current_scene, &mut scene_queue, &mut is_running)
+        {
+            current_scene_textures = new_scene_textures;
+            textures = vec![];
+
+            for texture_path in current_scene_textures {
+                textures.push(texture_creator.load_texture(texture_path).unwrap());
+            }
+        }
     }
 }
 
@@ -203,18 +211,20 @@ fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas) {
 fn update_scene_queue(
     current_scene: &mut Box<dyn Scene>,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
-    texture_creator: &TextureCreator<WindowContext>,
-    scene_textures: &mut Vec<Texture>,
     is_running: &mut bool,
-) {
+) -> Option<Vec<String>> {
     if current_scene.is_done() {
         current_scene.on_unload();
 
         if !scene_queue.is_empty() {
             *current_scene = scene_queue.pop_front().unwrap();
-            current_scene.on_load(texture_creator);
+            Some(current_scene.on_load())
         } else {
             *is_running = false;
+
+            None
         }
+    } else {
+        None
     }
 }
