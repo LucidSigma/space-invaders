@@ -9,7 +9,7 @@ use std::time::Instant;
 use sdl2::{
     keyboard::{KeyboardState, Scancode},
     mouse::{MouseButton, MouseState},
-    render::{TextureCreator, WindowCanvas},
+    render::{Texture, TextureCreator, WindowCanvas},
     video::WindowContext,
     EventPump, Sdl, VideoSubsystem,
 };
@@ -83,7 +83,7 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
 
     let mut current_scene = initial_scene;
-    current_scene.on_load(&texture_creator);
+    let mut current_scene_textures = current_scene.on_load(&texture_creator);
 
     let mut ticks_count = Instant::now();
     let mut is_running = true;
@@ -121,6 +121,7 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
             &mut current_scene,
             &mut scene_queue,
             &texture_creator,
+            &mut current_scene_textures,
             &mut is_running,
         );
     }
@@ -203,6 +204,7 @@ fn update_scene_queue(
     current_scene: &mut Box<dyn Scene>,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
     texture_creator: &TextureCreator<WindowContext>,
+    scene_textures: &mut Vec<Texture>,
     is_running: &mut bool,
 ) {
     if current_scene.is_done() {

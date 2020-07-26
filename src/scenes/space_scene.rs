@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
+use std::fs;
 
+use sdl2::image::LoadTexture;
 use sdl2::pixels::Color as Colour;
-use sdl2::render::TextureCreator;
+use sdl2::render::{Texture, TextureCreator};
 use sdl2::video::WindowContext;
 
 use crate::game::input::InputState;
@@ -13,6 +15,7 @@ pub struct SpaceScene {
     offset: f32,
     has_window_focus: bool,
     is_done: bool,
+    spaceship_texture_index: usize,
 }
 
 impl SpaceScene {
@@ -21,6 +24,7 @@ impl SpaceScene {
             offset: 0.0,
             has_window_focus: true,
             is_done: false,
+            spaceship_texture_index: 0,
         }
     }
 }
@@ -30,7 +34,26 @@ impl Scene for SpaceScene {
         self.is_done
     }
 
-    fn on_load(&mut self, texture_creator: &TextureCreator<WindowContext>) {}
+    fn on_load<'a>(
+        &mut self,
+        texture_creator: &'a TextureCreator<WindowContext>,
+    ) -> Vec<Texture<'a>> {
+        let mut textures = vec![];
+
+        for (current_index, texture_file) in fs::read_dir("assets/textures").unwrap().enumerate() {
+            let texture_file = texture_file.unwrap();
+            let texture_filepath = texture_file.path();
+
+            match texture_filepath.file_name().unwrap().to_str().unwrap() {
+                "ship.png" => self.spaceship_texture_index = current_index,
+                _ => (),
+            }
+
+            textures.push(texture_creator.load_texture(texture_filepath).unwrap());
+        }
+
+        textures
+    }
 
     fn on_unload(&mut self) {}
 
