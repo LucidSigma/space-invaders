@@ -11,7 +11,10 @@ use crate::game::input::InputState;
 use crate::game::scene::Scene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
+
 const SPACESHIP_VELOCITY: f32 = 500.0;
+const SPACESHIP_SHOOT_DELAY: f32 = 0.2;
+const BULLET_VELOCITY: f32 = 650.0;
 
 #[derive(Debug)]
 struct Spaceship {
@@ -21,8 +24,26 @@ struct Spaceship {
     height: u32,
 
     x_velocity: f32,
+    is_firing: bool,
+    shoot_delay: f32,
 
     texture_index: usize,
+    bullet_data: BulletData,
+    bullets: Vec<Bullet>,
+}
+
+#[derive(Copy, Clone, Debug)]
+struct BulletData {
+    width: u32,
+    height: u32,
+
+    texture_index: usize,
+}
+
+#[derive(Debug)]
+struct Bullet {
+    x: f32,
+    y: f32,
 }
 
 pub struct SpaceScene {
@@ -43,7 +64,15 @@ impl SpaceScene {
                 width: 0,
                 height: 0,
                 x_velocity: 0.0,
+                is_firing: false,
+                shoot_delay: 0.0,
                 texture_index: 0,
+                bullet_data: BulletData {
+                    width: 0,
+                    height: 0,
+                    texture_index: 0,
+                },
+                bullets: vec![],
             },
         }
     }
@@ -69,16 +98,10 @@ impl Scene for SpaceScene {
 
             match texture_filepath_string.as_ref() {
                 "ship.png" => {
-                    self.spaceship = Spaceship {
-                        x: (canvas.viewport().width() / 2) as f32,
-                        y: 0.0,
-                        width: 0,
-                        height: 0,
-                        x_velocity: 0.0,
-                        texture_index: current_index,
-                    };
+                    self.spaceship.x = (canvas.viewport().width() / 2) as f32;
+                    self.spaceship.texture_index = current_index;
                 }
-                "bullet.png" => (),
+                "bullet.png" => self.spaceship.bullet_data.texture_index = current_index,
                 _ => (),
             }
 
@@ -90,10 +113,14 @@ impl Scene for SpaceScene {
 
     fn on_late_load(&mut self, canvas: &WindowCanvas, textures: &[Texture]) {
         let spaceship_texture_data = &textures[self.spaceship.texture_index].query();
+        let bullet_texture_data = &textures[self.spaceship.bullet_data.texture_index].query();
 
         self.spaceship.width = spaceship_texture_data.width;
         self.spaceship.height = spaceship_texture_data.height;
         self.spaceship.y = (canvas.viewport().height() as u32 - self.spaceship.height) as f32;
+
+        self.spaceship.bullet_data.width = bullet_texture_data.width;
+        self.spaceship.bullet_data.height = bullet_texture_data.height;
     }
 
     fn on_unload(&mut self) {}
@@ -129,6 +156,13 @@ impl Scene for SpaceScene {
         if input_state.is_any_key_pressed(&[Scancode::D, Scancode::Right]) {
             self.spaceship.x_velocity += 1.0;
         }
+
+        self.spaceship.is_firing = false;
+
+        if input_state.is_key_pressed(Scancode::Space) && self.spaceship.shoot_delay <= 0.0 {
+            self.spaceship.is_firing = true;
+            self.spaceship.shoot_delay = SPACESHIP_SHOOT_DELAY;
+        }
     }
 
     fn update(
@@ -146,6 +180,26 @@ impl Scene for SpaceScene {
             f32::max(0.0, self.spaceship.x),
             canvas.viewport().width() as f32,
         );
+
+        if self.spaceship.is_firing {
+            self.spaceship.bullets.push(Bullet {
+                x: self.spaceship.x,
+                y: self.spaceship.y,
+            });
+        }
+
+        for bullet in &mut self.spaceship.bullets {
+            bullet.y -= delta_time * BULLET_VELOCITY;
+        }
+
+        let bullet_delete_threshold = -2.0 * self.spaceship.bullet_data.height as f32;
+        self.spaceship
+            .bullets
+            .retain(|bullet| bullet.y > bullet_delete_threshold);
+
+        if self.spaceship.shoot_delay > 0.0 {
+            self.spaceship.shoot_delay -= delta_time;
+        }
     }
 
     fn draw(&mut self, canvas: &mut WindowCanvas, textures: &[sdl2::render::Texture]) {
@@ -155,6 +209,22 @@ impl Scene for SpaceScene {
 
         canvas.set_draw_color(BACKGROUND_COLOUR);
         canvas.clear();
+
+        for bullet in &self.spaceship.bullets {
+            let bullet_rect = sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
+                self.spaceship.bullet_data.width,
+                self.spaceship.bullet_data.height,
+            );
+
+            canvas
+                .copy(
+                    &textures[self.spaceship.bullet_data.texture_index],
+                    None,
+                    bullet_rect,
+                )
+                .unwrap();
+        }
 
         let spaceship_rect = sdl2::rect::Rect::from_center(
             sdl2::rect::Point::new(self.spaceship.x as i32, self.spaceship.y as i32),
