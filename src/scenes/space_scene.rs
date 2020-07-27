@@ -3,7 +3,9 @@ use std::fs;
 
 use sdl2::{
     keyboard::Scancode,
+    mouse::MouseButton,
     pixels::Color as Colour,
+    rect::{Point, Rect},
     render::{Texture, WindowCanvas},
 };
 
@@ -17,15 +19,12 @@ const SPACESHIP_SHOOT_DELAY: f32 = 0.3;
 const BULLET_VELOCITY: f32 = 650.0;
 
 const ALIEN_ROW_COUNT: u32 = 4;
-const ALIEN_VELOCITY: f32 = 100.0;
-const ALIEN_DROPDOWN_DISTANCE: f32 = 25.0;
+const ALIEN_VELOCITY: f32 = 150.0;
+const ALIEN_DROPDOWN_DISTANCE: f32 = 40.0;
 
 #[derive(Debug)]
 struct Spaceship {
-    x: f32,
-    y: f32,
-    width: u32,
-    height: u32,
+    rect: Rect,
 
     x_velocity: f32,
     is_firing: bool,
@@ -36,7 +35,7 @@ struct Spaceship {
     bullets: Vec<Bullet>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 struct BulletData {
     width: u32,
     height: u32,
@@ -48,6 +47,8 @@ struct BulletData {
 struct Bullet {
     x: f32,
     y: f32,
+
+    has_hit_something: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -61,11 +62,13 @@ enum AlienDirection {
 struct Alien {
     x: f32,
     y: f32,
+
+    is_hit: bool,
 }
 
 impl Alien {
     fn new(x: f32, y: f32) -> Alien {
-        Alien { x, y }
+        Alien { x, y, is_hit: false, }
     }
 }
 
@@ -95,10 +98,7 @@ impl SpaceScene {
             has_window_focus: true,
             is_done: false,
             spaceship: Spaceship {
-                x: 0.0,
-                y: 0.0,
-                width: 0,
-                height: 0,
+                rect: Rect::new(0, 0, 0, 0),
                 x_velocity: 0.0,
                 is_firing: false,
                 shoot_delay: 0.0,
@@ -144,7 +144,7 @@ impl Scene for SpaceScene {
         self.is_done
     }
 
-    fn on_load(&mut self, canvas: &WindowCanvas) -> Vec<String> {
+    fn on_load(&mut self, _canvas: &WindowCanvas) -> Vec<String> {
         let mut textures = vec![];
 
         for (current_index, texture_file) in fs::read_dir("assets/textures").unwrap().enumerate() {
@@ -158,10 +158,7 @@ impl Scene for SpaceScene {
                 .to_owned();
 
             match texture_filepath_string.as_ref() {
-                "ship.png" => {
-                    self.spaceship.x = (canvas.viewport().width() / 2) as f32;
-                    self.spaceship.texture_index = current_index;
-                }
+                "ship.png" => self.spaceship.texture_index = current_index,
                 "bullet.png" => self.spaceship.bullet_data.texture_index = current_index,
                 "alien.png" => self.alien_data.texture_index = current_index,
                 _ => (),
@@ -178,9 +175,14 @@ impl Scene for SpaceScene {
         let bullet_texture_data = &textures[self.spaceship.bullet_data.texture_index].query();
         let alien_texture_data = &textures[self.alien_data.texture_index].query();
 
-        self.spaceship.width = spaceship_texture_data.width;
-        self.spaceship.height = spaceship_texture_data.height;
-        self.spaceship.y = (canvas.viewport().height() as u32 - self.spaceship.height) as f32;
+        self.spaceship.rect = Rect::from_center(
+            Point::new(
+                (canvas.viewport().width() / 2) as i32,
+                (canvas.viewport().height() - spaceship_texture_data.height) as i32,
+            ),
+            spaceship_texture_data.width,
+            spaceship_texture_data.height,
+        );
 
         self.spaceship.bullet_data.width = bullet_texture_data.width;
         self.spaceship.bullet_data.height = bullet_texture_data.height;
@@ -227,7 +229,10 @@ impl Scene for SpaceScene {
 
         self.spaceship.is_firing = false;
 
-        if input_state.is_key_pressed(Scancode::Space) && self.spaceship.shoot_delay <= 0.0 {
+        if (input_state.is_key_pressed(Scancode::Space)
+            || input_state.is_mouse_button_pressed(MouseButton::Left))
+            && self.spaceship.shoot_delay <= 0.0
+        {
             self.spaceship.is_firing = true;
             self.spaceship.shoot_delay = SPACESHIP_SHOOT_DELAY;
         }
@@ -243,27 +248,26 @@ impl Scene for SpaceScene {
             return;
         }
 
-        self.spaceship.x += self.spaceship.x_velocity * delta_time * SPACESHIP_VELOCITY;
-        self.spaceship.x = f32::min(
-            f32::max(0.0, self.spaceship.x),
-            canvas.viewport().width() as f32,
+        self.spaceship.rect.set_x(
+            (self.spaceship.rect.x() as f32
+                + (self.spaceship.x_velocity * delta_time * SPACESHIP_VELOCITY)) as i32,
         );
+        self.spaceship.rect.set_x(std::cmp::min(
+            std::cmp::max(0, self.spaceship.rect.x()),
+            (canvas.viewport().width() - self.spaceship.rect.width()) as i32,
+        ));
 
         if self.spaceship.is_firing {
             self.spaceship.bullets.push(Bullet {
-                x: self.spaceship.x,
-                y: self.spaceship.y - (self.spaceship.height / 2) as f32,
+                x: (self.spaceship.rect.x() + self.spaceship.rect.width() as i32 / 2) as f32,
+                y: (self.spaceship.rect.y()) as f32,
+                has_hit_something: false,
             });
         }
 
         for bullet in &mut self.spaceship.bullets {
             bullet.y -= delta_time * BULLET_VELOCITY;
         }
-
-        let bullet_delete_threshold = -2.0 * self.spaceship.bullet_data.height as f32;
-        self.spaceship
-            .bullets
-            .retain(|bullet| bullet.y > bullet_delete_threshold);
 
         if self.spaceship.shoot_delay > 0.0 {
             self.spaceship.shoot_delay -= delta_time;
@@ -301,7 +305,35 @@ impl Scene for SpaceScene {
                     }
                 }
             }
+
+            if !self.spaceship.bullets.is_empty() {
+                let alien_rect = sdl2::rect::Rect::from_center(
+                    sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
+                    self.alien_data.width,
+                    self.alien_data.height,
+                );
+
+                for bullet in &mut self.spaceship.bullets {
+                    let bullet_rect = sdl2::rect::Rect::from_center(
+                        sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
+                        self.spaceship.bullet_data.width,
+                        self.spaceship.bullet_data.height,
+                    );
+
+                    if alien_rect.intersection(bullet_rect).is_some() {
+                        alien.is_hit = true;
+                        bullet.has_hit_something = true;
+                    }
+                }
+            }
         }
+
+        let bullet_delete_threshold = -2.0 * self.spaceship.bullet_data.height as f32;
+        self.spaceship
+            .bullets
+            .retain(|bullet| bullet.y > bullet_delete_threshold && !bullet.has_hit_something);
+
+        self.aliens.retain(|alien| !alien.is_hit);
 
         if switch_alien_direction {
             self.alien_data.next_direction = match self.alien_data.direction {
@@ -351,17 +383,11 @@ impl Scene for SpaceScene {
                 .unwrap();
         }
 
-        let spaceship_rect = sdl2::rect::Rect::from_center(
-            sdl2::rect::Point::new(self.spaceship.x as i32, self.spaceship.y as i32),
-            self.spaceship.width,
-            self.spaceship.height,
-        );
-
         canvas
             .copy(
                 &textures[self.spaceship.texture_index],
                 None,
-                spaceship_rect,
+                self.spaceship.rect,
             )
             .unwrap();
     }
