@@ -13,7 +13,7 @@ use crate::game::scene::Scene;
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
 const SPACESHIP_VELOCITY: f32 = 500.0;
-const SPACESHIP_SHOOT_DELAY: f32 = 0.2;
+const SPACESHIP_SHOOT_DELAY: f32 = 0.3;
 const BULLET_VELOCITY: f32 = 650.0;
 
 #[derive(Debug)]
@@ -184,7 +184,7 @@ impl Scene for SpaceScene {
         if self.spaceship.is_firing {
             self.spaceship.bullets.push(Bullet {
                 x: self.spaceship.x,
-                y: self.spaceship.y,
+                y: self.spaceship.y - (self.spaceship.height / 2) as f32,
             });
         }
 
