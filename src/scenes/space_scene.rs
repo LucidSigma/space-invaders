@@ -19,7 +19,8 @@ const SPACESHIP_SHOOT_DELAY: f32 = 0.3;
 const BULLET_VELOCITY: f32 = 650.0;
 
 const ALIEN_ROW_COUNT: u32 = 4;
-const ALIEN_VELOCITY: f32 = 150.0;
+const INITIAL_ALIEN_VELOCITY: f32 = 100.0;
+const ALIEN_VELOCITY_INCREMENT: f32 = 10.0;
 const ALIEN_DROPDOWN_DISTANCE: f32 = 40.0;
 
 #[derive(Debug)]
@@ -68,7 +69,11 @@ struct Alien {
 
 impl Alien {
     fn new(x: f32, y: f32) -> Alien {
-        Alien { x, y, is_hit: false, }
+        Alien {
+            x,
+            y,
+            is_hit: false,
+        }
     }
 }
 
@@ -76,6 +81,7 @@ struct AlienData {
     width: u32,
     height: u32,
 
+    velocity: f32,
     direction: AlienDirection,
     next_direction: Option<AlienDirection>,
     dropdown_distance: f32,
@@ -113,6 +119,7 @@ impl SpaceScene {
             alien_data: AlienData {
                 width: 0,
                 height: 0,
+                velocity: INITIAL_ALIEN_VELOCITY,
                 direction: AlienDirection::Right,
                 next_direction: None,
                 dropdown_distance: 0.0,
@@ -274,7 +281,7 @@ impl Scene for SpaceScene {
         }
 
         let mut switch_alien_direction = false;
-        let movement = delta_time * ALIEN_VELOCITY;
+        let movement = delta_time * self.alien_data.velocity;
 
         if self.alien_data.dropdown_distance > 0.0 {
             self.alien_data.dropdown_distance -= movement;
@@ -342,6 +349,7 @@ impl Scene for SpaceScene {
                 _ => unreachable!(),
             };
 
+            self.alien_data.velocity += ALIEN_VELOCITY_INCREMENT;
             self.alien_data.direction = AlienDirection::Down;
             self.alien_data.dropdown_distance = ALIEN_DROPDOWN_DISTANCE;
         }
