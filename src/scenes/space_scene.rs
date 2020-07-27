@@ -17,6 +17,8 @@ const SPACESHIP_SHOOT_DELAY: f32 = 0.3;
 const BULLET_VELOCITY: f32 = 650.0;
 
 const ALIEN_ROW_COUNT: u32 = 4;
+const ALIEN_VELOCITY: f32 = 100.0;
+const ALIEN_DROPDOWN_DISTANCE: f32 = 25.0;
 
 #[derive(Debug)]
 struct Spaceship {
@@ -34,7 +36,7 @@ struct Spaceship {
     bullets: Vec<Bullet>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct BulletData {
     width: u32,
     height: u32,
@@ -48,6 +50,14 @@ struct Bullet {
     y: f32,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AlienDirection {
+    Left,
+    Right,
+    Down,
+}
+
+#[derive(Debug)]
 struct Alien {
     x: f32,
     y: f32,
@@ -62,6 +72,10 @@ impl Alien {
 struct AlienData {
     width: u32,
     height: u32,
+
+    direction: AlienDirection,
+    next_direction: Option<AlienDirection>,
+    dropdown_distance: f32,
 
     texture_index: usize,
 }
@@ -99,6 +113,9 @@ impl SpaceScene {
             alien_data: AlienData {
                 width: 0,
                 height: 0,
+                direction: AlienDirection::Right,
+                next_direction: None,
+                dropdown_distance: 0.0,
                 texture_index: 0,
             },
             aliens: vec![],
@@ -113,7 +130,7 @@ impl SpaceScene {
                 self.aliens.push(Alien::new(
                     alien_x as f32,
                     self.alien_data.height as f32
-                        + (self.alien_data.height as f32 * 2.0 * alien_y as f32),
+                        + (self.alien_data.height as f32 * 1.5 * alien_y as f32),
                 ));
 
                 alien_x += self.alien_data.width * 2;
@@ -250,6 +267,51 @@ impl Scene for SpaceScene {
 
         if self.spaceship.shoot_delay > 0.0 {
             self.spaceship.shoot_delay -= delta_time;
+        }
+
+        let mut switch_alien_direction = false;
+        let movement = delta_time * ALIEN_VELOCITY;
+
+        if self.alien_data.dropdown_distance > 0.0 {
+            self.alien_data.dropdown_distance -= movement;
+        }
+
+        for alien in &mut self.aliens {
+            match self.alien_data.direction {
+                AlienDirection::Left => {
+                    alien.x -= movement;
+
+                    if alien.x <= self.alien_data.width as f32 / 2.0 {
+                        switch_alien_direction = true;
+                    }
+                }
+                AlienDirection::Right => {
+                    alien.x += movement;
+
+                    if alien.x >= (canvas.viewport().width() - self.alien_data.width / 2) as f32 {
+                        switch_alien_direction = true;
+                    }
+                }
+                AlienDirection::Down => {
+                    alien.y += movement;
+
+                    if self.alien_data.dropdown_distance <= 0.0 {
+                        self.alien_data.direction = self.alien_data.next_direction.unwrap();
+                        self.alien_data.next_direction = None;
+                    }
+                }
+            }
+        }
+
+        if switch_alien_direction {
+            self.alien_data.next_direction = match self.alien_data.direction {
+                AlienDirection::Left => Some(AlienDirection::Right),
+                AlienDirection::Right => Some(AlienDirection::Left),
+                _ => unreachable!(),
+            };
+
+            self.alien_data.direction = AlienDirection::Down;
+            self.alien_data.dropdown_distance = ALIEN_DROPDOWN_DISTANCE;
         }
     }
 
