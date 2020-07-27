@@ -10,7 +10,7 @@ use sdl2::{
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
 
-const BACKGROUND_COLOUR: Colour = Colour::RGB(25, 25, 25);
+const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 const SPACESHIP_VELOCITY: f32 = 500.0;
 
 #[derive(Debug)]

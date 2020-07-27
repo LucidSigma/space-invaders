@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use sdl2::{
     image::{self, LoadTexture},
-    keyboard::{KeyboardState, Scancode},
+    keyboard::{KeyboardState, Keycode, Scancode},
     mouse::{MouseButton, MouseState},
     render::{Texture, TextureCreator, WindowCanvas},
     EventPump, Sdl, VideoSubsystem,
@@ -90,6 +90,8 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
     let mut ticks_count = Instant::now();
     let mut is_running = true;
 
+    let mut size_before_fullscreen = None;
+
     let mut previous_keys: Vec<Scancode> = vec![];
     let mut previous_mouse_buttons: Vec<MouseButton> = vec![];
     let mut mouse_y_scroll_amount = 0;
@@ -100,6 +102,8 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
         poll_events(
             &mut current_scene,
             event_pump,
+            canvas,
+            &mut size_before_fullscreen,
             &mut is_running,
             &mut mouse_y_scroll_amount,
         );
@@ -144,6 +148,8 @@ fn calculate_delta_time(ticks_count: &mut Instant) -> f32 {
 fn poll_events(
     current_scene: &mut Box<dyn Scene>,
     event_pump: &mut EventPump,
+    canvas: &mut WindowCanvas,
+    size_before_fullscreen: &mut Option<(u32, u32)>,
     is_running: &mut bool,
     mouse_y_scroll_amount: &mut i32,
 ) {
@@ -157,6 +163,12 @@ fn poll_events(
                 win_event: Close, ..
             } => {
                 *is_running = false;
+            }
+            KeyDown {
+                keycode: Some(Keycode::F11),
+                ..
+            } => {
+                toggle_fullscreen(canvas, size_before_fullscreen);
             }
             MouseWheel { y, .. } => {
                 *mouse_y_scroll_amount = y;
@@ -248,4 +260,38 @@ fn create_textures<'a>(
     }
 
     textures
+}
+
+fn toggle_fullscreen(canvas: &mut WindowCanvas, size_before_fullscreen: &mut Option<(u32, u32)>) {
+    use sdl2::video::FullscreenType;
+
+    let current_viewport_size = (canvas.viewport().width(), canvas.viewport().height());
+    let window = canvas.window_mut();
+
+    match window.fullscreen_state() {
+        FullscreenType::True | FullscreenType::Desktop => {
+            window
+                .set_size(
+                    size_before_fullscreen.unwrap().0,
+                    size_before_fullscreen.unwrap().1,
+                )
+                .unwrap();
+
+            window.set_fullscreen(FullscreenType::Off).unwrap();
+            window.set_bordered(true);
+
+            *size_before_fullscreen = None;
+        }
+        FullscreenType::Off => {
+            *size_before_fullscreen = Some(current_viewport_size);
+            window.set_fullscreen(FullscreenType::True).unwrap();
+            window.set_bordered(false);
+
+            let display_mode = window.display_mode().unwrap();
+
+            window
+                .set_size(display_mode.w as u32, display_mode.h as u32)
+                .unwrap();
+        }
+    }
 }
