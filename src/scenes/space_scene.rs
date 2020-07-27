@@ -16,6 +16,8 @@ const SPACESHIP_VELOCITY: f32 = 500.0;
 const SPACESHIP_SHOOT_DELAY: f32 = 0.3;
 const BULLET_VELOCITY: f32 = 650.0;
 
+const ALIEN_ROW_COUNT: u32 = 4;
+
 #[derive(Debug)]
 struct Spaceship {
     x: f32,
@@ -46,11 +48,31 @@ struct Bullet {
     y: f32,
 }
 
+struct Alien {
+    x: f32,
+    y: f32,
+}
+
+impl Alien {
+    fn new(x: f32, y: f32) -> Alien {
+        Alien { x, y }
+    }
+}
+
+struct AlienData {
+    width: u32,
+    height: u32,
+
+    texture_index: usize,
+}
+
 pub struct SpaceScene {
     has_window_focus: bool,
     is_done: bool,
 
     spaceship: Spaceship,
+    alien_data: AlienData,
+    aliens: Vec<Alien>,
 }
 
 impl SpaceScene {
@@ -74,6 +96,28 @@ impl SpaceScene {
                 },
                 bullets: vec![],
             },
+            alien_data: AlienData {
+                width: 0,
+                height: 0,
+                texture_index: 0,
+            },
+            aliens: vec![],
+        }
+    }
+
+    fn create_alien_fleet(&mut self, canvas: &WindowCanvas) {
+        for alien_y in 0..ALIEN_ROW_COUNT {
+            let mut alien_x = self.alien_data.width;
+
+            while alien_x < canvas.viewport().width() - self.alien_data.width {
+                self.aliens.push(Alien::new(
+                    alien_x as f32,
+                    self.alien_data.height as f32
+                        + (self.alien_data.height as f32 * 2.0 * alien_y as f32),
+                ));
+
+                alien_x += self.alien_data.width * 2;
+            }
         }
     }
 }
@@ -102,6 +146,7 @@ impl Scene for SpaceScene {
                     self.spaceship.texture_index = current_index;
                 }
                 "bullet.png" => self.spaceship.bullet_data.texture_index = current_index,
+                "alien.png" => self.alien_data.texture_index = current_index,
                 _ => (),
             }
 
@@ -114,6 +159,7 @@ impl Scene for SpaceScene {
     fn on_late_load(&mut self, canvas: &WindowCanvas, textures: &[Texture]) {
         let spaceship_texture_data = &textures[self.spaceship.texture_index].query();
         let bullet_texture_data = &textures[self.spaceship.bullet_data.texture_index].query();
+        let alien_texture_data = &textures[self.alien_data.texture_index].query();
 
         self.spaceship.width = spaceship_texture_data.width;
         self.spaceship.height = spaceship_texture_data.height;
@@ -121,6 +167,11 @@ impl Scene for SpaceScene {
 
         self.spaceship.bullet_data.width = bullet_texture_data.width;
         self.spaceship.bullet_data.height = bullet_texture_data.height;
+
+        self.alien_data.width = alien_texture_data.width;
+        self.alien_data.height = alien_texture_data.height;
+
+        self.create_alien_fleet(canvas);
     }
 
     fn on_unload(&mut self) {}
@@ -223,6 +274,18 @@ impl Scene for SpaceScene {
                     None,
                     bullet_rect,
                 )
+                .unwrap();
+        }
+
+        for alien in &self.aliens {
+            let alien_rect = sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
+                self.alien_data.width,
+                self.alien_data.height,
+            );
+
+            canvas
+                .copy(&textures[self.alien_data.texture_index], None, alien_rect)
                 .unwrap();
         }
 
