@@ -7,7 +7,7 @@ use std::fs;
 use std::time::Instant;
 
 use sdl2::{
-    image::LoadTexture,
+    image::{self, LoadTexture},
     keyboard::{KeyboardState, Scancode},
     mouse::{MouseButton, MouseState},
     render::{Texture, TextureCreator, WindowCanvas},
@@ -50,6 +50,7 @@ fn read_config_file() -> Result<Config, Box<dyn Error>> {
 
 fn initialise_sdl() -> Result<(Sdl, VideoSubsystem), String> {
     let sdl_context = sdl2::init()?;
+    image::init(image::InitFlag::PNG)?;
     let video_subsystem = sdl_context.video()?;
 
     Ok((sdl_context, video_subsystem))

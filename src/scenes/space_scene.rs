@@ -10,8 +10,10 @@ use sdl2::{
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
 
-const BACKGROUND_COLOUR: Colour = Colour::RGB(230, 230, 230);
+const BACKGROUND_COLOUR: Colour = Colour::RGB(25, 25, 25);
+const SPACESHIP_VELOCITY: f32 = 500.0;
 
+#[derive(Debug)]
 struct Spaceship {
     x: f32,
     y: f32,
@@ -139,9 +141,9 @@ impl Scene for SpaceScene {
             return;
         }
 
-        self.spaceship.x += self.spaceship.x_velocity * delta_time;
-        self.spaceship.x = f32::max(
-            f32::min(0.0, self.spaceship.x),
+        self.spaceship.x += self.spaceship.x_velocity * delta_time * SPACESHIP_VELOCITY;
+        self.spaceship.x = f32::min(
+            f32::max(0.0, self.spaceship.x),
             canvas.viewport().width() as f32,
         );
     }
@@ -155,10 +157,7 @@ impl Scene for SpaceScene {
         canvas.clear();
 
         let spaceship_rect = sdl2::rect::Rect::from_center(
-            sdl2::rect::Point::new(
-                (canvas.viewport().width() / 2 + self.spaceship.x as u32) as i32,
-                self.spaceship.y as i32,
-            ),
+            sdl2::rect::Point::new(self.spaceship.x as i32, self.spaceship.y as i32),
             self.spaceship.width,
             self.spaceship.height,
         );
