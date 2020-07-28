@@ -1,3 +1,6 @@
+mod alien;
+mod spaceship;
+
 use std::collections::VecDeque;
 use std::fs;
 
@@ -9,93 +12,16 @@ use sdl2::{
     render::{Texture, WindowCanvas},
 };
 
+use self::alien::*;
+use self::spaceship::bullet::*;
+use self::spaceship::*;
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
 const INITIAL_PLAYER_LIVES: u32 = 3;
-const SPACESHIP_VELOCITY: f32 = 500.0;
-const SPACESHIP_SHOOT_DELAY: f32 = 0.3;
-const BULLET_VELOCITY: f32 = 650.0;
-
-const ALIEN_ROW_COUNT: u32 = 4;
-const INITIAL_ALIEN_VELOCITY: f32 = 100.0;
-const PER_LEVEL_ALIEN_VELOCITY_INCREASE: f32 = 20.0;
-const ALIEN_VELOCITY_INCREMENT: f32 = 10.0;
-const ALIEN_DROPDOWN_DISTANCE: f32 = 40.0;
-
 const LEVEL_RESET_TIME: f32 = 1.0;
-
-#[derive(Debug)]
-struct Spaceship {
-    rect: Rect,
-
-    x_velocity: f32,
-    is_firing: bool,
-    shoot_delay: f32,
-
-    is_hit: bool,
-
-    texture_index: usize,
-    bullet_data: BulletData,
-    bullets: Vec<Bullet>,
-}
-
-#[derive(Debug)]
-struct BulletData {
-    width: u32,
-    height: u32,
-
-    texture_index: usize,
-}
-
-#[derive(Debug)]
-struct Bullet {
-    x: f32,
-    y: f32,
-
-    has_hit_something: bool,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum AlienDirection {
-    Left,
-    Right,
-    Down,
-}
-
-#[derive(Debug)]
-struct Alien {
-    x: f32,
-    y: f32,
-
-    is_hit: bool,
-}
-
-impl Alien {
-    fn new(x: f32, y: f32) -> Alien {
-        Alien {
-            x,
-            y,
-            is_hit: false,
-        }
-    }
-}
-
-struct AlienData {
-    width: u32,
-    height: u32,
-
-    velocity: f32,
-    direction: AlienDirection,
-    next_direction: Option<AlienDirection>,
-    dropdown_distance: f32,
-
-    has_hit_bottom: bool,
-
-    texture_index: usize,
-}
 
 pub struct SpaceScene {
     has_window_focus: bool,
