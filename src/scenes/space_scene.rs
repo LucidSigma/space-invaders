@@ -198,10 +198,6 @@ impl SpaceScene {
         let mut switch_alien_direction = false;
         let movement = delta_time * self.alien_data.velocity;
 
-        if self.alien_data.dropdown_distance > 0.0 {
-            self.alien_data.dropdown_distance -= movement;
-        }
-
         for alien in &mut self.aliens {
             match self.alien_data.direction {
                 AlienDirection::Left => {
@@ -220,33 +216,40 @@ impl SpaceScene {
                 }
                 AlienDirection::Down => {
                     alien.y += movement;
-
-                    if self.alien_data.dropdown_distance <= 0.0 {
-                        self.alien_data.direction = self.alien_data.next_direction.unwrap();
-                        self.alien_data.next_direction = None;
-                    }
                 }
             }
 
-            if !self.spaceship.bullets.is_empty() {
-                let alien_rect = sdl2::rect::Rect::from_center(
-                    sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
-                    self.alien_data.width,
-                    self.alien_data.height,
+            let alien_rect = sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
+                self.alien_data.width,
+                self.alien_data.height,
+            );
+
+            for bullet in &mut self.spaceship.bullets {
+                let bullet_rect = sdl2::rect::Rect::from_center(
+                    sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
+                    self.spaceship.bullet_data.width,
+                    self.spaceship.bullet_data.height,
                 );
 
-                for bullet in &mut self.spaceship.bullets {
-                    let bullet_rect = sdl2::rect::Rect::from_center(
-                        sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
-                        self.spaceship.bullet_data.width,
-                        self.spaceship.bullet_data.height,
-                    );
-
-                    if alien_rect.intersection(bullet_rect).is_some() {
-                        alien.is_hit = true;
-                        bullet.has_hit_something = true;
-                    }
+                if alien_rect.intersection(bullet_rect).is_some() {
+                    alien.is_hit = true;
+                    bullet.has_hit_something = true;
                 }
+            }
+
+            if alien_rect.intersection(self.spaceship.rect).is_some() {
+                alien.is_hit = true;
+                self.is_done = true;
+            }
+        }
+
+        if self.alien_data.direction == AlienDirection::Down {
+            if self.alien_data.dropdown_distance > 0.0 {
+                self.alien_data.dropdown_distance -= movement;
+            } else {
+                self.alien_data.direction = self.alien_data.next_direction.unwrap();
+                self.alien_data.next_direction = None;
             }
         }
 
@@ -271,13 +274,7 @@ impl SpaceScene {
                 self.spaceship.bullet_data.height,
             );
 
-            canvas
-                .copy(
-                    bullet_texture,
-                    None,
-                    bullet_rect,
-                )
-                .unwrap();
+            canvas.copy(bullet_texture, None, bullet_rect).unwrap();
         }
     }
 
@@ -289,19 +286,13 @@ impl SpaceScene {
                 self.alien_data.height,
             );
 
-            canvas
-                .copy(alien_texture, None, alien_rect)
-                .unwrap();
+            canvas.copy(alien_texture, None, alien_rect).unwrap();
         }
     }
 
     fn draw_spaceship(&self, canvas: &mut WindowCanvas, spaceship_texture: &Texture) {
         canvas
-            .copy(
-                spaceship_texture,
-                None,
-                self.spaceship.rect,
-            )
+            .copy(spaceship_texture, None, self.spaceship.rect)
             .unwrap();
     }
 }
