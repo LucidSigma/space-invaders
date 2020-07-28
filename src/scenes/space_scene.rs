@@ -144,6 +144,166 @@ impl SpaceScene {
             }
         }
     }
+
+    fn process_spaceship_input(&mut self, input_state: &InputState) {
+        self.spaceship.x_velocity = 0.0;
+
+        if input_state.is_any_key_pressed(&[Scancode::A, Scancode::Left]) {
+            self.spaceship.x_velocity -= 1.0;
+        }
+
+        if input_state.is_any_key_pressed(&[Scancode::D, Scancode::Right]) {
+            self.spaceship.x_velocity += 1.0;
+        }
+
+        self.spaceship.is_firing = false;
+
+        if (input_state.is_key_pressed(Scancode::Space)
+            || input_state.is_mouse_button_pressed(MouseButton::Left))
+            && self.spaceship.shoot_delay <= 0.0
+        {
+            self.spaceship.is_firing = true;
+            self.spaceship.shoot_delay = SPACESHIP_SHOOT_DELAY;
+        }
+    }
+
+    fn update_spaceship(&mut self, delta_time: f32, canvas: &WindowCanvas) {
+        self.spaceship.rect.set_x(
+            (self.spaceship.rect.x() as f32
+                + (self.spaceship.x_velocity * delta_time * SPACESHIP_VELOCITY)) as i32,
+        );
+        self.spaceship.rect.set_x(std::cmp::min(
+            std::cmp::max(0, self.spaceship.rect.x()),
+            (canvas.viewport().width() - self.spaceship.rect.width()) as i32,
+        ));
+
+        if self.spaceship.is_firing {
+            self.spaceship.bullets.push(Bullet {
+                x: (self.spaceship.rect.x() + self.spaceship.rect.width() as i32 / 2) as f32,
+                y: (self.spaceship.rect.y()) as f32,
+                has_hit_something: false,
+            });
+        }
+
+        for bullet in &mut self.spaceship.bullets {
+            bullet.y -= delta_time * BULLET_VELOCITY;
+        }
+
+        if self.spaceship.shoot_delay > 0.0 {
+            self.spaceship.shoot_delay -= delta_time;
+        }
+    }
+
+    fn update_aliens(&mut self, delta_time: f32, canvas: &WindowCanvas) {
+        let mut switch_alien_direction = false;
+        let movement = delta_time * self.alien_data.velocity;
+
+        if self.alien_data.dropdown_distance > 0.0 {
+            self.alien_data.dropdown_distance -= movement;
+        }
+
+        for alien in &mut self.aliens {
+            match self.alien_data.direction {
+                AlienDirection::Left => {
+                    alien.x -= movement;
+
+                    if alien.x <= self.alien_data.width as f32 / 2.0 {
+                        switch_alien_direction = true;
+                    }
+                }
+                AlienDirection::Right => {
+                    alien.x += movement;
+
+                    if alien.x >= (canvas.viewport().width() - self.alien_data.width / 2) as f32 {
+                        switch_alien_direction = true;
+                    }
+                }
+                AlienDirection::Down => {
+                    alien.y += movement;
+
+                    if self.alien_data.dropdown_distance <= 0.0 {
+                        self.alien_data.direction = self.alien_data.next_direction.unwrap();
+                        self.alien_data.next_direction = None;
+                    }
+                }
+            }
+
+            if !self.spaceship.bullets.is_empty() {
+                let alien_rect = sdl2::rect::Rect::from_center(
+                    sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
+                    self.alien_data.width,
+                    self.alien_data.height,
+                );
+
+                for bullet in &mut self.spaceship.bullets {
+                    let bullet_rect = sdl2::rect::Rect::from_center(
+                        sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
+                        self.spaceship.bullet_data.width,
+                        self.spaceship.bullet_data.height,
+                    );
+
+                    if alien_rect.intersection(bullet_rect).is_some() {
+                        alien.is_hit = true;
+                        bullet.has_hit_something = true;
+                    }
+                }
+            }
+        }
+
+        if switch_alien_direction {
+            self.alien_data.next_direction = match self.alien_data.direction {
+                AlienDirection::Left => Some(AlienDirection::Right),
+                AlienDirection::Right => Some(AlienDirection::Left),
+                _ => unreachable!(),
+            };
+
+            self.alien_data.velocity += ALIEN_VELOCITY_INCREMENT;
+            self.alien_data.direction = AlienDirection::Down;
+            self.alien_data.dropdown_distance = ALIEN_DROPDOWN_DISTANCE;
+        }
+    }
+
+    fn draw_bullets(&self, canvas: &mut WindowCanvas, bullet_texture: &Texture) {
+        for bullet in &self.spaceship.bullets {
+            let bullet_rect = sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
+                self.spaceship.bullet_data.width,
+                self.spaceship.bullet_data.height,
+            );
+
+            canvas
+                .copy(
+                    bullet_texture,
+                    None,
+                    bullet_rect,
+                )
+                .unwrap();
+        }
+    }
+
+    fn draw_aliens(&self, canvas: &mut WindowCanvas, alien_texture: &Texture) {
+        for alien in &self.aliens {
+            let alien_rect = sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
+                self.alien_data.width,
+                self.alien_data.height,
+            );
+
+            canvas
+                .copy(alien_texture, None, alien_rect)
+                .unwrap();
+        }
+    }
+
+    fn draw_spaceship(&self, canvas: &mut WindowCanvas, spaceship_texture: &Texture) {
+        canvas
+            .copy(
+                spaceship_texture,
+                None,
+                self.spaceship.rect,
+            )
+            .unwrap();
+    }
 }
 
 impl Scene for SpaceScene {
@@ -224,25 +384,7 @@ impl Scene for SpaceScene {
             self.is_done = true;
         }
 
-        self.spaceship.x_velocity = 0.0;
-
-        if input_state.is_any_key_pressed(&[Scancode::A, Scancode::Left]) {
-            self.spaceship.x_velocity -= 1.0;
-        }
-
-        if input_state.is_any_key_pressed(&[Scancode::D, Scancode::Right]) {
-            self.spaceship.x_velocity += 1.0;
-        }
-
-        self.spaceship.is_firing = false;
-
-        if (input_state.is_key_pressed(Scancode::Space)
-            || input_state.is_mouse_button_pressed(MouseButton::Left))
-            && self.spaceship.shoot_delay <= 0.0
-        {
-            self.spaceship.is_firing = true;
-            self.spaceship.shoot_delay = SPACESHIP_SHOOT_DELAY;
-        }
+        self.process_spaceship_input(input_state);
     }
 
     fn update(
@@ -255,85 +397,8 @@ impl Scene for SpaceScene {
             return;
         }
 
-        self.spaceship.rect.set_x(
-            (self.spaceship.rect.x() as f32
-                + (self.spaceship.x_velocity * delta_time * SPACESHIP_VELOCITY)) as i32,
-        );
-        self.spaceship.rect.set_x(std::cmp::min(
-            std::cmp::max(0, self.spaceship.rect.x()),
-            (canvas.viewport().width() - self.spaceship.rect.width()) as i32,
-        ));
-
-        if self.spaceship.is_firing {
-            self.spaceship.bullets.push(Bullet {
-                x: (self.spaceship.rect.x() + self.spaceship.rect.width() as i32 / 2) as f32,
-                y: (self.spaceship.rect.y()) as f32,
-                has_hit_something: false,
-            });
-        }
-
-        for bullet in &mut self.spaceship.bullets {
-            bullet.y -= delta_time * BULLET_VELOCITY;
-        }
-
-        if self.spaceship.shoot_delay > 0.0 {
-            self.spaceship.shoot_delay -= delta_time;
-        }
-
-        let mut switch_alien_direction = false;
-        let movement = delta_time * self.alien_data.velocity;
-
-        if self.alien_data.dropdown_distance > 0.0 {
-            self.alien_data.dropdown_distance -= movement;
-        }
-
-        for alien in &mut self.aliens {
-            match self.alien_data.direction {
-                AlienDirection::Left => {
-                    alien.x -= movement;
-
-                    if alien.x <= self.alien_data.width as f32 / 2.0 {
-                        switch_alien_direction = true;
-                    }
-                }
-                AlienDirection::Right => {
-                    alien.x += movement;
-
-                    if alien.x >= (canvas.viewport().width() - self.alien_data.width / 2) as f32 {
-                        switch_alien_direction = true;
-                    }
-                }
-                AlienDirection::Down => {
-                    alien.y += movement;
-
-                    if self.alien_data.dropdown_distance <= 0.0 {
-                        self.alien_data.direction = self.alien_data.next_direction.unwrap();
-                        self.alien_data.next_direction = None;
-                    }
-                }
-            }
-
-            if !self.spaceship.bullets.is_empty() {
-                let alien_rect = sdl2::rect::Rect::from_center(
-                    sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
-                    self.alien_data.width,
-                    self.alien_data.height,
-                );
-
-                for bullet in &mut self.spaceship.bullets {
-                    let bullet_rect = sdl2::rect::Rect::from_center(
-                        sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
-                        self.spaceship.bullet_data.width,
-                        self.spaceship.bullet_data.height,
-                    );
-
-                    if alien_rect.intersection(bullet_rect).is_some() {
-                        alien.is_hit = true;
-                        bullet.has_hit_something = true;
-                    }
-                }
-            }
-        }
+        self.update_spaceship(delta_time, canvas);
+        self.update_aliens(delta_time, canvas);
 
         let bullet_delete_threshold = -2.0 * self.spaceship.bullet_data.height as f32;
         self.spaceship
@@ -341,18 +406,6 @@ impl Scene for SpaceScene {
             .retain(|bullet| bullet.y > bullet_delete_threshold && !bullet.has_hit_something);
 
         self.aliens.retain(|alien| !alien.is_hit);
-
-        if switch_alien_direction {
-            self.alien_data.next_direction = match self.alien_data.direction {
-                AlienDirection::Left => Some(AlienDirection::Right),
-                AlienDirection::Right => Some(AlienDirection::Left),
-                _ => unreachable!(),
-            };
-
-            self.alien_data.velocity += ALIEN_VELOCITY_INCREMENT;
-            self.alien_data.direction = AlienDirection::Down;
-            self.alien_data.dropdown_distance = ALIEN_DROPDOWN_DISTANCE;
-        }
     }
 
     fn draw(&mut self, canvas: &mut WindowCanvas, textures: &[sdl2::render::Texture]) {
@@ -363,40 +416,8 @@ impl Scene for SpaceScene {
         canvas.set_draw_color(BACKGROUND_COLOUR);
         canvas.clear();
 
-        for bullet in &self.spaceship.bullets {
-            let bullet_rect = sdl2::rect::Rect::from_center(
-                sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
-                self.spaceship.bullet_data.width,
-                self.spaceship.bullet_data.height,
-            );
-
-            canvas
-                .copy(
-                    &textures[self.spaceship.bullet_data.texture_index],
-                    None,
-                    bullet_rect,
-                )
-                .unwrap();
-        }
-
-        for alien in &self.aliens {
-            let alien_rect = sdl2::rect::Rect::from_center(
-                sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
-                self.alien_data.width,
-                self.alien_data.height,
-            );
-
-            canvas
-                .copy(&textures[self.alien_data.texture_index], None, alien_rect)
-                .unwrap();
-        }
-
-        canvas
-            .copy(
-                &textures[self.spaceship.texture_index],
-                None,
-                self.spaceship.rect,
-            )
-            .unwrap();
+        self.draw_bullets(canvas, &textures[self.spaceship.bullet_data.texture_index]);
+        self.draw_aliens(canvas, &textures[self.alien_data.texture_index]);
+        self.draw_spaceship(canvas, &textures[self.spaceship.texture_index]);
     }
 }
