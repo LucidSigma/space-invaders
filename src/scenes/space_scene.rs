@@ -92,6 +92,8 @@ struct AlienData {
     next_direction: Option<AlienDirection>,
     dropdown_distance: f32,
 
+    has_hit_bottom: bool,
+
     texture_index: usize,
 }
 
@@ -139,6 +141,7 @@ impl SpaceScene {
                 direction: AlienDirection::Right,
                 next_direction: None,
                 dropdown_distance: 0.0,
+                has_hit_bottom: false,
                 texture_index: 0,
             },
             aliens: vec![],
@@ -170,6 +173,7 @@ impl SpaceScene {
         self.alien_data.direction = AlienDirection::Right;
         self.alien_data.next_direction = None;
         self.alien_data.dropdown_distance = 0.0;
+        self.alien_data.has_hit_bottom = false;
 
         self.aliens.clear();
 
@@ -284,6 +288,11 @@ impl SpaceScene {
             if alien_rect.intersection(self.spaceship.rect).is_some() {
                 alien.is_hit = true;
                 self.spaceship.is_hit = true;
+                self.level_reset_timeout = LEVEL_RESET_TIME;
+            }
+
+            if alien_rect.y() as u32 + alien_rect.height() >= canvas.viewport().height() {
+                self.alien_data.has_hit_bottom = true;
                 self.level_reset_timeout = LEVEL_RESET_TIME;
             }
         }
@@ -454,7 +463,7 @@ impl Scene for SpaceScene {
             if self.aliens.is_empty() {
                 self.current_level += 1;
                 self.setup_objects(canvas);
-            } else if self.spaceship.is_hit {
+            } else if self.spaceship.is_hit || self.alien_data.has_hit_bottom {
                 self.player_lives -= 1;
 
                 if self.player_lives > 0 {
