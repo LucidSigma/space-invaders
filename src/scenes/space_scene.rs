@@ -17,6 +17,7 @@ use self::spaceship::bullet::*;
 use self::spaceship::*;
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
+use crate::scenes::main_menu_scene::MainMenuScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
@@ -323,8 +324,6 @@ impl Scene for SpaceScene {
         self.setup_objects(canvas);
     }
 
-    fn on_unload(&mut self) {}
-
     fn poll_event(&mut self, event: sdl2::event::Event) {
         use sdl2::event::Event::*;
         use sdl2::event::WindowEvent::{Minimized as Minimised, *};
@@ -353,11 +352,15 @@ impl Scene for SpaceScene {
     fn update(
         &mut self,
         delta_time: f32,
-        _scene_queue: &mut VecDeque<Box<dyn Scene>>,
+        scene_queue: &mut VecDeque<Box<dyn Scene>>,
         canvas: &WindowCanvas,
     ) {
         if !self.has_window_focus {
             return;
+        }
+
+        if self.is_done {
+            scene_queue.push_back(Box::new(MainMenuScene::new()));
         }
 
         if self.level_reset_timeout <= 0.0 {
@@ -382,7 +385,7 @@ impl Scene for SpaceScene {
     fn late_update(
         &mut self,
         _delta_time: f32,
-        _scene_queue: &mut VecDeque<Box<dyn Scene>>,
+        scene_queue: &mut VecDeque<Box<dyn Scene>>,
         canvas: &WindowCanvas,
     ) {
         if self.level_reset_timeout <= 0.0 {
@@ -396,6 +399,7 @@ impl Scene for SpaceScene {
                     self.setup_objects(canvas);
                 } else {
                     self.is_done = true;
+                    scene_queue.push_back(Box::new(MainMenuScene::new()));
                 }
             }
         }

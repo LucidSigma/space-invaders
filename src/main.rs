@@ -1,8 +1,8 @@
 mod game;
 mod scenes;
 
-use crate::scenes::space_scene::SpaceScene;
+use crate::scenes::main_menu_scene::MainMenuScene;
 
 fn main() {
-    game::play(Box::new(SpaceScene::new()));
+    game::play(Box::new(MainMenuScene::new()));
 }

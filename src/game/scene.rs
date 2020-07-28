@@ -8,7 +8,7 @@ pub trait Scene {
     fn is_done(&self) -> bool;
 
     fn on_load(&mut self, canvas: &WindowCanvas) -> Vec<String>;
-    fn on_late_load(&mut self, canvas: &WindowCanvas, textures: &[Texture]);
+    fn on_late_load(&mut self, _canvas: &WindowCanvas, _textures: &[Texture]) {}
     fn on_unload(&mut self) {}
 
     fn poll_event(&mut self, _event: sdl2::event::Event) {}
