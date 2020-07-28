@@ -21,8 +21,11 @@ const BULLET_VELOCITY: f32 = 650.0;
 
 const ALIEN_ROW_COUNT: u32 = 4;
 const INITIAL_ALIEN_VELOCITY: f32 = 100.0;
+const PER_LEVEL_ALIEN_VELOCITY_INCREASE: f32 = 20.0;
 const ALIEN_VELOCITY_INCREMENT: f32 = 10.0;
 const ALIEN_DROPDOWN_DISTANCE: f32 = 40.0;
+
+const LEVEL_RESET_TIME: f32 = 1.0;
 
 #[derive(Debug)]
 struct Spaceship {
@@ -96,8 +99,9 @@ pub struct SpaceScene {
     has_window_focus: bool,
     is_done: bool,
 
+    current_level: u32,
     player_lives: u32,
-    lost_life_timeout: f32,
+    level_reset_timeout: f32,
 
     spaceship: Spaceship,
     spaceship_size: (u32, u32),
@@ -110,8 +114,9 @@ impl SpaceScene {
         SpaceScene {
             has_window_focus: true,
             is_done: false,
+            current_level: 1,
             player_lives: INITIAL_PLAYER_LIVES,
-            lost_life_timeout: 0.0,
+            level_reset_timeout: 0.0,
             spaceship: Spaceship {
                 rect: Rect::new(0, 0, 0, 0),
                 x_velocity: 0.0,
@@ -160,7 +165,8 @@ impl SpaceScene {
     }
 
     fn create_alien_fleet(&mut self, canvas: &WindowCanvas) {
-        self.alien_data.velocity = INITIAL_ALIEN_VELOCITY;
+        self.alien_data.velocity = INITIAL_ALIEN_VELOCITY
+            + (self.current_level - 1) as f32 * PER_LEVEL_ALIEN_VELOCITY_INCREASE;
         self.alien_data.direction = AlienDirection::Right;
         self.alien_data.next_direction = None;
         self.alien_data.dropdown_distance = 0.0;
@@ -278,7 +284,7 @@ impl SpaceScene {
             if alien_rect.intersection(self.spaceship.rect).is_some() {
                 alien.is_hit = true;
                 self.spaceship.is_hit = true;
-                self.lost_life_timeout = 1.0;
+                self.level_reset_timeout = LEVEL_RESET_TIME;
             }
         }
 
@@ -419,7 +425,7 @@ impl Scene for SpaceScene {
             return;
         }
 
-        if self.lost_life_timeout <= 0.0 {
+        if self.level_reset_timeout <= 0.0 {
             self.update_spaceship(delta_time, canvas);
             self.update_aliens(delta_time, canvas);
 
@@ -429,8 +435,12 @@ impl Scene for SpaceScene {
                 .retain(|bullet| bullet.y > bullet_delete_threshold && !bullet.has_hit_something);
 
             self.aliens.retain(|alien| !alien.is_hit);
+
+            if self.aliens.is_empty() {
+                self.level_reset_timeout = LEVEL_RESET_TIME;
+            }
         } else {
-            self.lost_life_timeout -= delta_time;
+            self.level_reset_timeout -= delta_time;
         }
     }
 
@@ -440,13 +450,18 @@ impl Scene for SpaceScene {
         _scene_queue: &mut VecDeque<Box<dyn Scene>>,
         canvas: &WindowCanvas,
     ) {
-        if self.spaceship.is_hit && self.lost_life_timeout <= 0.0 {
-            self.player_lives -= 1;
-
-            if self.player_lives > 0 {
+        if self.level_reset_timeout <= 0.0 {
+            if self.aliens.is_empty() {
+                self.current_level += 1;
                 self.setup_objects(canvas);
-            } else {
-                self.is_done = true;
+            } else if self.spaceship.is_hit {
+                self.player_lives -= 1;
+
+                if self.player_lives > 0 {
+                    self.setup_objects(canvas);
+                } else {
+                    self.is_done = true;
+                }
             }
         }
     }
