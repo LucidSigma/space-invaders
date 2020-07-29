@@ -1,14 +1,15 @@
 use std::collections::VecDeque;
 
-use sdl2::render::{Texture, WindowCanvas};
+use sdl2::render::{Texture, TextureCreator, WindowCanvas};
+use sdl2::ttf::Font;
 
 use super::input::InputState;
 
 pub trait Scene {
     fn is_done(&self) -> bool;
 
-    fn on_load(&mut self, canvas: &WindowCanvas) -> Vec<String>;
-    fn on_late_load(&mut self, _canvas: &WindowCanvas, _textures: &[Texture]) {}
+    fn on_load(&mut self, canvas: &WindowCanvas) -> (Vec<String>, Vec<String>);
+    fn on_late_load(&mut self, _canvas: &WindowCanvas, _textures: &[Texture], _fonts: &[Font]) {}
     fn on_unload(&mut self) {}
 
     fn poll_event(&mut self, _event: sdl2::event::Event) {}
@@ -29,5 +30,11 @@ pub trait Scene {
     ) {
     }
 
-    fn draw(&mut self, canvas: &mut WindowCanvas, textures: &[Texture]);
+    fn draw(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        textures: &[Texture],
+        fonts: &[Font],
+    );
 }

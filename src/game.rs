@@ -11,6 +11,7 @@ use sdl2::{
     keyboard::{KeyboardState, Keycode, Scancode},
     mouse::{MouseButton, MouseState},
     render::{Texture, TextureCreator, WindowCanvas},
+    ttf::{self, Font},
     EventPump, Sdl, VideoSubsystem,
 };
 
@@ -27,11 +28,11 @@ struct Config {
 pub fn play(initial_scene: Box<dyn Scene>) {
     let config = read_config_file().unwrap();
 
-    let (sdl_context, video_subsystem) = initialise_sdl().unwrap();
+    let (sdl_context, ttf_context, video_subsystem) = initialise_sdl().unwrap();
     let mut canvas = initialise_canvas(&video_subsystem, &config).unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    play_loop(initial_scene, &mut canvas, &mut event_pump);
+    play_loop(initial_scene, &mut canvas, &ttf_context, &mut event_pump);
 }
 
 fn read_config_file() -> Result<Config, Box<dyn Error>> {
@@ -48,12 +49,13 @@ fn read_config_file() -> Result<Config, Box<dyn Error>> {
     })
 }
 
-fn initialise_sdl() -> Result<(Sdl, VideoSubsystem), String> {
+fn initialise_sdl() -> Result<(Sdl, ttf::Sdl2TtfContext, VideoSubsystem), String> {
     let sdl_context = sdl2::init()?;
     image::init(image::InitFlag::PNG)?;
+    let ttf_context = ttf::init().unwrap();
     let video_subsystem = sdl_context.video()?;
 
-    Ok((sdl_context, video_subsystem))
+    Ok((sdl_context, ttf_context, video_subsystem))
 }
 
 fn initialise_canvas(
@@ -79,13 +81,21 @@ fn initialise_canvas(
     Ok(canvas)
 }
 
-fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pump: &mut EventPump) {
+fn play_loop(
+    initial_scene: Box<dyn Scene>,
+    canvas: &mut WindowCanvas,
+    ttf_context: &ttf::Sdl2TtfContext,
+    event_pump: &mut EventPump,
+) {
     let texture_creator = canvas.texture_creator();
 
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
     let mut current_scene = initial_scene;
-    let mut textures = create_textures(&texture_creator, &current_scene.on_load(&canvas));
-    current_scene.on_late_load(&canvas, &textures);
+    let (texture_paths, font_paths) = current_scene.on_load(&canvas);
+
+    let mut textures = create_textures(&texture_creator, &texture_paths);
+    let mut fonts = create_fonts(ttf_context, &font_paths);
+    current_scene.on_late_load(&canvas, &textures, &fonts);
 
     let mut ticks_count = Instant::now();
     let mut is_running = true;
@@ -115,20 +125,30 @@ fn play_loop(initial_scene: Box<dyn Scene>, canvas: &mut WindowCanvas, event_pum
 
         update(&mut current_scene, delta_time, &mut scene_queue, &canvas);
         late_update(&mut current_scene, delta_time, &mut scene_queue, &canvas);
-        draw(&mut current_scene, canvas, &textures);
+        draw(
+            &mut current_scene,
+            canvas,
+            &texture_creator,
+            &textures,
+            &fonts,
+        );
 
         previous_keys = input::update_key_state(&event_pump.keyboard_state());
         previous_mouse_buttons = input::update_mouse_button_state(&event_pump.mouse_state());
         mouse_y_scroll_amount = 0;
 
-        if let Some(ref new_scene_textures) = update_scene_queue(
+        if let Some(new_scene_resources) = update_scene_queue(
             &mut current_scene,
             &mut scene_queue,
             &canvas,
             &mut is_running,
         ) {
-            textures = create_textures(&texture_creator, new_scene_textures);
-            current_scene.on_late_load(&canvas, &textures);
+            let (texture_paths, font_paths) = new_scene_resources;
+
+            textures = create_textures(&texture_creator, &texture_paths);
+            fonts = create_fonts(ttf_context, &font_paths);
+
+            current_scene.on_late_load(&canvas, &textures, &fonts);
         }
     }
 }
@@ -217,8 +237,14 @@ fn late_update(
     current_scene.late_update(delta_time, scene_queue, canvas);
 }
 
-fn draw(current_scene: &mut Box<dyn Scene>, canvas: &mut WindowCanvas, textures: &[Texture]) {
-    current_scene.draw(canvas, textures);
+fn draw(
+    current_scene: &mut Box<dyn Scene>,
+    canvas: &mut WindowCanvas,
+    texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+    textures: &[Texture],
+    fonts: &[Font],
+) {
+    current_scene.draw(canvas, texture_creator, textures, fonts);
 
     canvas.present();
 }
@@ -228,7 +254,7 @@ fn update_scene_queue(
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
     canvas: &WindowCanvas,
     is_running: &mut bool,
-) -> Option<Vec<String>> {
+) -> Option<(Vec<String>, Vec<String>)> {
     if current_scene.is_done() {
         current_scene.on_unload();
 
@@ -256,6 +282,19 @@ fn create_textures<'a>(
     }
 
     textures
+}
+
+fn create_fonts<'a>(
+    ttf_context: &'a ttf::Sdl2TtfContext,
+    font_filepaths: &[String],
+) -> Vec<Font<'a, 'a>> {
+    let mut fonts = vec![];
+
+    for font_path in font_filepaths {
+        fonts.push(ttf_context.load_font(font_path, 128).unwrap());
+    }
+
+    fonts
 }
 
 fn toggle_fullscreen(canvas: &mut WindowCanvas) {

@@ -9,7 +9,8 @@ use sdl2::{
     mouse::MouseButton,
     pixels::Color as Colour,
     rect::{Point, Rect},
-    render::{Texture, WindowCanvas},
+    render::{Texture, TextureCreator, WindowCanvas},
+    ttf::Font,
 };
 
 use self::alien::*;
@@ -282,7 +283,7 @@ impl Scene for SpaceScene {
         self.is_done
     }
 
-    fn on_load(&mut self, _canvas: &WindowCanvas) -> Vec<String> {
+    fn on_load(&mut self, _canvas: &WindowCanvas) -> (Vec<String>, Vec<String>) {
         let mut textures = vec![];
 
         for (current_index, texture_file) in fs::read_dir("assets/textures").unwrap().enumerate() {
@@ -305,10 +306,10 @@ impl Scene for SpaceScene {
             textures.push(texture_filepath.to_str().unwrap().to_owned());
         }
 
-        textures
+        (textures, vec![])
     }
 
-    fn on_late_load(&mut self, canvas: &WindowCanvas, textures: &[Texture]) {
+    fn on_late_load(&mut self, canvas: &WindowCanvas, textures: &[Texture], _fonts: &[Font]) {
         let spaceship_texture_data = &textures[self.spaceship.texture_index].query();
         let bullet_texture_data = &textures[self.spaceship.bullet_data.texture_index].query();
         let alien_texture_data = &textures[self.alien_data.texture_index].query();
@@ -405,7 +406,13 @@ impl Scene for SpaceScene {
         }
     }
 
-    fn draw(&mut self, canvas: &mut WindowCanvas, textures: &[sdl2::render::Texture]) {
+    fn draw(
+        &mut self,
+        canvas: &mut WindowCanvas,
+        _texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        textures: &[sdl2::render::Texture],
+        _fonts: &[Font],
+    ) {
         if !self.has_window_focus {
             return;
         }

@@ -13,4 +13,4 @@ serde_json = "1.0"
 [dependencies.sdl2]
 version = "0.34.2"
 default-features = false
-features = ["image"]
+features = ["image", "mixer", "ttf"]
