@@ -61,6 +61,7 @@ impl SpaceScene {
                 },
                 bullets: vec![],
                 shoot_sound: None,
+                death_sound: None,
             },
             spaceship_size: (0, 0),
             alien_data: AlienData {
@@ -229,6 +230,14 @@ impl SpaceScene {
                 alien.is_hit = true;
                 self.spaceship.is_hit = true;
                 self.level_reset_timeout = LEVEL_RESET_TIME;
+
+                sound_channel
+                    .play(self.alien_data.death_sound.as_ref().unwrap(), 0)
+                    .unwrap();
+
+                sound_channel
+                    .play(self.spaceship.death_sound.as_ref().unwrap(), 0)
+                    .unwrap();
             }
 
             if alien_rect.y() as u32 + alien_rect.height() >= canvas.viewport().height() {
@@ -330,10 +339,13 @@ impl Scene for SpaceScene {
 
             match sound_filepath_string.as_ref() {
                 "player_shoot.wav" => {
-                    self.spaceship.shoot_sound = Some(Chunk::from_file(sound_filepath).unwrap())
+                    self.spaceship.shoot_sound = Some(Chunk::from_file(sound_filepath).unwrap());
+                }
+                "player_death.wav" => {
+                    self.spaceship.death_sound = Some(Chunk::from_file(sound_filepath).unwrap());
                 }
                 "alien_death.wav" => {
-                    self.alien_data.death_sound = Some(Chunk::from_file(sound_filepath).unwrap())
+                    self.alien_data.death_sound = Some(Chunk::from_file(sound_filepath).unwrap());
                 }
                 _ => (),
             }

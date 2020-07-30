@@ -22,4 +22,5 @@ pub struct Spaceship {
     pub bullets: Vec<Bullet>,
 
     pub shoot_sound: Option<Chunk>,
+    pub death_sound: Option<Chunk>,
 }
