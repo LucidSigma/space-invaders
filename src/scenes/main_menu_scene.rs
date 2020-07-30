@@ -1,118 +1,22 @@
+mod button;
+
 use std::collections::VecDeque;
 use std::fs;
 
-use sdl2::keyboard::Scancode;
-use sdl2::pixels::Color as Colour;
-use sdl2::render::{Texture, TextureCreator, WindowCanvas};
-use sdl2::ttf::Font;
+use sdl2::{
+    keyboard::Scancode,
+    pixels::Color as Colour,
+    rect::{Point, Rect},
+    render::{Texture, TextureCreator, WindowCanvas},
+    ttf::Font,
+};
 
+use self::button::Button;
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
 use crate::scenes::space_scene::SpaceScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
-
-struct Button<'a> {
-    rect: sdl2::rect::Rect,
-    midpoint: (u32, u32),
-
-    text: &'a str,
-    text_scale: f32,
-
-    is_hovered: bool,
-    is_clicked: bool,
-
-    text_colour: Colour,
-    hovered_text_colour: Colour,
-    clicked_text_colour: Colour,
-
-    background_colour: Colour,
-    hovered_background_colour: Colour,
-    clicked_background_colour: Colour,
-}
-
-impl Button<'_> {
-    fn new(x: u32, y: u32, width: u32, height: u32, text: &str, text_scale: f32) -> Button {
-        Button {
-            rect: sdl2::rect::Rect::from_center(
-                sdl2::rect::Point::new(x as i32, y as i32),
-                width,
-                height,
-            ),
-            midpoint: (x, y),
-            text,
-            text_scale,
-            is_hovered: false,
-            is_clicked: false,
-            text_colour: Colour::BLACK,
-            hovered_text_colour: Colour::BLACK,
-            clicked_text_colour: Colour::BLACK,
-            background_colour: Colour::WHITE,
-            hovered_background_colour: Colour::WHITE,
-            clicked_background_colour: Colour::WHITE,
-        }
-    }
-
-    fn set_colours(
-        &mut self,
-        text_colour: Colour,
-        hovered_text_colour: Colour,
-        clicked_text_colour: Colour,
-        background_colour: Colour,
-        hovered_background_colour: Colour,
-        clicked_background_colour: Colour,
-    ) {
-        self.text_colour = text_colour;
-        self.hovered_text_colour = hovered_text_colour;
-        self.clicked_text_colour = clicked_text_colour;
-        self.background_colour = background_colour;
-        self.hovered_background_colour = hovered_background_colour;
-        self.clicked_background_colour = clicked_background_colour;
-    }
-
-    fn is_mouse_over(&self, input_state: &InputState) -> bool {
-        self.rect.contains_point(sdl2::rect::Point::new(
-            input_state.mouse_x,
-            input_state.mouse_y,
-        ))
-    }
-
-    fn draw(
-        &self,
-        canvas: &mut WindowCanvas,
-        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
-        font: &Font,
-    ) {
-        let (text_colour, background_colour) = if self.is_clicked {
-            (self.clicked_text_colour, self.clicked_background_colour)
-        } else if self.is_hovered {
-            (self.hovered_text_colour, self.hovered_background_colour)
-        } else {
-            (self.text_colour, self.background_colour)
-        };
-
-        canvas.set_draw_color(background_colour);
-        canvas.fill_rect(self.rect).unwrap();
-
-        let text = font.render(self.text).solid(text_colour).unwrap();
-
-        let text_texture = texture_creator.create_texture_from_surface(text).unwrap();
-
-        let text_texture_data = text_texture.query();
-
-        canvas
-            .copy(
-                &text_texture,
-                None,
-                sdl2::rect::Rect::from_center(
-                    sdl2::rect::Point::new(self.midpoint.0 as i32, self.midpoint.1 as i32),
-                    (text_texture_data.width as f32 * self.text_scale) as u32,
-                    (text_texture_data.height as f32 * self.text_scale) as u32,
-                ),
-            )
-            .unwrap();
-    }
-}
 
 pub struct MainMenuScene<'a> {
     font_index: usize,
@@ -150,8 +54,8 @@ impl<'a> MainMenuScene<'a> {
             .copy(
                 &title_texture,
                 None,
-                sdl2::rect::Rect::from_center(
-                    sdl2::rect::Point::new(canvas.viewport().width() as i32 / 2, 128),
+                Rect::from_center(
+                    Point::new(canvas.viewport().width() as i32 / 2, 128),
                     title_texture_data.width,
                     title_texture_data.height,
                 ),
