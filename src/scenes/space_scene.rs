@@ -6,6 +6,7 @@ use std::fs;
 
 use sdl2::{
     keyboard::Scancode,
+    mixer::{Channel, Chunk},
     pixels::Color as Colour,
     rect::{Point, Rect},
     render::{Texture, TextureCreator, WindowCanvas},
@@ -59,6 +60,7 @@ impl SpaceScene {
                     texture_index: 0,
                 },
                 bullets: vec![],
+                shoot_sound: None,
             },
             spaceship_size: (0, 0),
             alien_data: AlienData {
@@ -138,7 +140,12 @@ impl SpaceScene {
         }
     }
 
-    fn update_spaceship(&mut self, delta_time: f32, canvas: &WindowCanvas) {
+    fn update_spaceship(
+        &mut self,
+        delta_time: f32,
+        canvas: &WindowCanvas,
+        sound_channel: &Channel,
+    ) {
         self.spaceship.rect.set_x(
             (self.spaceship.rect.x() as f32
                 + (self.spaceship.x_velocity * delta_time * SPACESHIP_VELOCITY)) as i32,
@@ -154,6 +161,10 @@ impl SpaceScene {
                 y: (self.spaceship.rect.y()) as f32,
                 has_hit_something: false,
             });
+
+            sound_channel
+                .play(self.spaceship.shoot_sound.as_ref().unwrap(), 0)
+                .unwrap();
         }
 
         for bullet in &mut self.spaceship.bullets {
@@ -302,6 +313,24 @@ impl Scene for SpaceScene {
             textures.push(texture_filepath.to_str().unwrap().to_owned());
         }
 
+        for sound_file in fs::read_dir("assets/sounds/effects").unwrap() {
+            let sound_file = sound_file.unwrap();
+            let sound_filepath = sound_file.path();
+            let sound_filepath_string = sound_filepath
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
+
+            match sound_filepath_string.as_ref() {
+                "shoot.wav" => {
+                    self.spaceship.shoot_sound = Some(Chunk::from_file(sound_filepath).unwrap())
+                }
+                _ => (),
+            }
+        }
+
         (textures, vec![])
     }
 
@@ -351,6 +380,7 @@ impl Scene for SpaceScene {
         delta_time: f32,
         scene_queue: &mut VecDeque<Box<dyn Scene>>,
         canvas: &WindowCanvas,
+        sound_channel: &Channel,
     ) {
         if !self.has_window_focus {
             return;
@@ -361,7 +391,7 @@ impl Scene for SpaceScene {
         }
 
         if self.level_reset_timeout <= 0.0 {
-            self.update_spaceship(delta_time, canvas);
+            self.update_spaceship(delta_time, canvas, sound_channel);
             self.update_aliens(delta_time, canvas);
 
             let bullet_delete_threshold = -2.0 * self.spaceship.bullet_data.height as f32;
@@ -384,6 +414,7 @@ impl Scene for SpaceScene {
         _delta_time: f32,
         scene_queue: &mut VecDeque<Box<dyn Scene>>,
         canvas: &WindowCanvas,
+        _sound_channel: &Channel,
     ) {
         if self.level_reset_timeout <= 0.0 {
             if self.aliens.is_empty() {

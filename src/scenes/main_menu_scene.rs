@@ -152,6 +152,7 @@ impl Scene for MainMenuScene<'_> {
         _delta_time: f32,
         scene_queue: &mut VecDeque<Box<dyn Scene>>,
         _canvas: &WindowCanvas,
+        _sound_channel: &sdl2::mixer::Channel,
     ) {
         if self.buttons.first().unwrap().is_clicked {
             self.is_done = true;

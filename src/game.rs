@@ -9,6 +9,7 @@ use std::time::Instant;
 use sdl2::{
     image::{self, LoadTexture},
     keyboard::{KeyboardState, Keycode, Scancode},
+    mixer::{self, Channel},
     mouse::{MouseButton, MouseState},
     render::{Texture, TextureCreator, WindowCanvas},
     ttf::{self, Font},
@@ -28,7 +29,8 @@ struct Config {
 pub fn play(initial_scene: Box<dyn Scene>) {
     let config = read_config_file().unwrap();
 
-    let (sdl_context, ttf_context, video_subsystem) = initialise_sdl().unwrap();
+    let (sdl_context, _image_context, _mixer_context, ttf_context, video_subsystem) =
+        initialise_sdl().unwrap();
     let mut canvas = initialise_canvas(&video_subsystem, &config).unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -49,13 +51,35 @@ fn read_config_file() -> Result<Config, Box<dyn Error>> {
     })
 }
 
-fn initialise_sdl() -> Result<(Sdl, ttf::Sdl2TtfContext, VideoSubsystem), String> {
+fn initialise_sdl() -> Result<
+    (
+        Sdl,
+        image::Sdl2ImageContext,
+        mixer::Sdl2MixerContext,
+        ttf::Sdl2TtfContext,
+        VideoSubsystem,
+    ),
+    String,
+> {
     let sdl_context = sdl2::init()?;
-    image::init(image::InitFlag::PNG)?;
+    let image_context = image::init(image::InitFlag::PNG)?;
+    let mixer_context = mixer::init(mixer::InitFlag::OGG)?;
+    mixer::open_audio(
+        mixer::DEFAULT_FREQUENCY,
+        mixer::DEFAULT_FORMAT,
+        mixer::DEFAULT_CHANNELS,
+        1024,
+    )?;
     let ttf_context = ttf::init().unwrap();
     let video_subsystem = sdl_context.video()?;
 
-    Ok((sdl_context, ttf_context, video_subsystem))
+    Ok((
+        sdl_context,
+        image_context,
+        mixer_context,
+        ttf_context,
+        video_subsystem,
+    ))
 }
 
 fn initialise_canvas(
@@ -88,6 +112,7 @@ fn play_loop(
     event_pump: &mut EventPump,
 ) {
     let texture_creator = canvas.texture_creator();
+    let sound_channel = Channel::all();
 
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
     let mut current_scene = initial_scene;
@@ -123,8 +148,20 @@ fn play_loop(
             mouse_y_scroll_amount,
         );
 
-        update(&mut current_scene, delta_time, &mut scene_queue, &canvas);
-        late_update(&mut current_scene, delta_time, &mut scene_queue, &canvas);
+        update(
+            &mut current_scene,
+            delta_time,
+            &mut scene_queue,
+            &canvas,
+            &sound_channel,
+        );
+        late_update(
+            &mut current_scene,
+            delta_time,
+            &mut scene_queue,
+            &canvas,
+            &sound_channel,
+        );
         draw(
             &mut current_scene,
             canvas,
@@ -224,8 +261,9 @@ fn update(
     delta_time: f32,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
     canvas: &WindowCanvas,
+    sound_channel: &Channel,
 ) {
-    current_scene.update(delta_time, scene_queue, canvas);
+    current_scene.update(delta_time, scene_queue, canvas, sound_channel);
 }
 
 fn late_update(
@@ -233,8 +271,9 @@ fn late_update(
     delta_time: f32,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
     canvas: &WindowCanvas,
+    sound_channel: &Channel,
 ) {
-    current_scene.late_update(delta_time, scene_queue, canvas);
+    current_scene.late_update(delta_time, scene_queue, canvas, sound_channel);
 }
 
 fn draw(

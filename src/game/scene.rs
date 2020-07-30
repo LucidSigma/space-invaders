@@ -20,6 +20,7 @@ pub trait Scene {
         delta_time: f32,
         scene_queue: &mut VecDeque<Box<dyn Scene>>,
         canvas: &WindowCanvas,
+        sound_channel: &sdl2::mixer::Channel,
     );
 
     fn late_update(
@@ -27,6 +28,7 @@ pub trait Scene {
         _delta_time: f32,
         _scene_queue: &mut VecDeque<Box<dyn Scene>>,
         _canvas: &WindowCanvas,
+        _sound_channel: &sdl2::mixer::Channel,
     ) {
     }
 
