@@ -72,6 +72,7 @@ impl SpaceScene {
                 dropdown_distance: 0.0,
                 has_hit_bottom: false,
                 texture_index: 0,
+                death_sound: None,
             },
             aliens: vec![],
         }
@@ -176,7 +177,7 @@ impl SpaceScene {
         }
     }
 
-    fn update_aliens(&mut self, delta_time: f32, canvas: &WindowCanvas) {
+    fn update_aliens(&mut self, delta_time: f32, canvas: &WindowCanvas, sound_channel: &Channel) {
         let mut switch_alien_direction = false;
         let movement = delta_time * self.alien_data.velocity;
 
@@ -217,6 +218,10 @@ impl SpaceScene {
                 if alien_rect.intersection(bullet_rect).is_some() {
                     alien.is_hit = true;
                     bullet.has_hit_something = true;
+
+                    sound_channel
+                        .play(self.alien_data.death_sound.as_ref().unwrap(), 0)
+                        .unwrap();
                 }
             }
 
@@ -324,8 +329,11 @@ impl Scene for SpaceScene {
                 .to_owned();
 
             match sound_filepath_string.as_ref() {
-                "shoot.wav" => {
+                "player_shoot.wav" => {
                     self.spaceship.shoot_sound = Some(Chunk::from_file(sound_filepath).unwrap())
+                }
+                "alien_death.wav" => {
+                    self.alien_data.death_sound = Some(Chunk::from_file(sound_filepath).unwrap())
                 }
                 _ => (),
             }
@@ -392,7 +400,7 @@ impl Scene for SpaceScene {
 
         if self.level_reset_timeout <= 0.0 {
             self.update_spaceship(delta_time, canvas, sound_channel);
-            self.update_aliens(delta_time, canvas);
+            self.update_aliens(delta_time, canvas, sound_channel);
 
             let bullet_delete_threshold = -2.0 * self.spaceship.bullet_data.height as f32;
             self.spaceship

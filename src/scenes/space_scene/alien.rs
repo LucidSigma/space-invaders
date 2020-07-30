@@ -41,4 +41,5 @@ pub struct AlienData {
     pub has_hit_bottom: bool,
 
     pub texture_index: usize,
+    pub death_sound: Option<sdl2::mixer::Chunk>,
 }
