@@ -6,7 +6,6 @@ use std::fs;
 
 use sdl2::{
     keyboard::Scancode,
-    mouse::MouseButton,
     pixels::Color as Colour,
     rect::{Point, Rect},
     render::{Texture, TextureCreator, WindowCanvas},
@@ -133,10 +132,7 @@ impl SpaceScene {
 
         self.spaceship.is_firing = false;
 
-        if (input_state.is_key_pressed(Scancode::Space)
-            || input_state.is_mouse_button_pressed(MouseButton::Left))
-            && self.spaceship.shoot_delay <= 0.0
-        {
+        if input_state.is_key_pressed(Scancode::Space) && self.spaceship.shoot_delay <= 0.0 {
             self.spaceship.is_firing = true;
             self.spaceship.shoot_delay = SPACESHIP_SHOOT_DELAY;
         }

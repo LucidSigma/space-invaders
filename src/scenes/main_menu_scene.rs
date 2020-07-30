@@ -12,23 +12,130 @@ use crate::scenes::space_scene::SpaceScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
-pub struct MainMenuScene {
-    font_index: usize,
+struct Button<'a> {
+    rect: sdl2::rect::Rect,
+    midpoint: (u32, u32),
 
-    load_game_scene: bool,
+    text: &'a str,
+    text_scale: f32,
+
+    is_hovered: bool,
+    is_clicked: bool,
+
+    text_colour: Colour,
+    hovered_text_colour: Colour,
+    clicked_text_colour: Colour,
+
+    background_colour: Colour,
+    hovered_background_colour: Colour,
+    clicked_background_colour: Colour,
+}
+
+impl Button<'_> {
+    fn new(x: u32, y: u32, width: u32, height: u32, text: &str, text_scale: f32) -> Button {
+        Button {
+            rect: sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(x as i32, y as i32),
+                width,
+                height,
+            ),
+            midpoint: (x, y),
+            text,
+            text_scale,
+            is_hovered: false,
+            is_clicked: false,
+            text_colour: Colour::BLACK,
+            hovered_text_colour: Colour::BLACK,
+            clicked_text_colour: Colour::BLACK,
+            background_colour: Colour::WHITE,
+            hovered_background_colour: Colour::WHITE,
+            clicked_background_colour: Colour::WHITE,
+        }
+    }
+
+    fn set_colours(
+        &mut self,
+        text_colour: Colour,
+        hovered_text_colour: Colour,
+        clicked_text_colour: Colour,
+        background_colour: Colour,
+        hovered_background_colour: Colour,
+        clicked_background_colour: Colour,
+    ) {
+        self.text_colour = text_colour;
+        self.hovered_text_colour = hovered_text_colour;
+        self.clicked_text_colour = clicked_text_colour;
+        self.background_colour = background_colour;
+        self.hovered_background_colour = hovered_background_colour;
+        self.clicked_background_colour = clicked_background_colour;
+    }
+
+    fn is_mouse_over(&self, input_state: &InputState) -> bool {
+        self.rect.contains_point(sdl2::rect::Point::new(
+            input_state.mouse_x,
+            input_state.mouse_y,
+        ))
+    }
+
+    fn draw(
+        &self,
+        canvas: &mut WindowCanvas,
+        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        font: &Font,
+    ) {
+        let (text_colour, background_colour) = if self.is_clicked {
+            (self.clicked_text_colour, self.clicked_background_colour)
+        } else if self.is_hovered {
+            (self.hovered_text_colour, self.hovered_background_colour)
+        } else {
+            (self.text_colour, self.background_colour)
+        };
+
+        canvas.set_draw_color(background_colour);
+        canvas.fill_rect(self.rect).unwrap();
+
+        let text = font.render(self.text).solid(text_colour).unwrap();
+
+        let text_texture = texture_creator.create_texture_from_surface(text).unwrap();
+
+        let text_texture_data = text_texture.query();
+
+        canvas
+            .copy(
+                &text_texture,
+                None,
+                sdl2::rect::Rect::from_center(
+                    sdl2::rect::Point::new(self.midpoint.0 as i32, self.midpoint.1 as i32),
+                    (text_texture_data.width as f32 * self.text_scale) as u32,
+                    (text_texture_data.height as f32 * self.text_scale) as u32,
+                ),
+            )
+            .unwrap();
+    }
+}
+
+pub struct MainMenuScene<'a> {
+    font_index: usize,
+    buttons: Vec<Button<'a>>,
+
     is_done: bool,
 }
 
-impl MainMenuScene {
-    pub fn new() -> MainMenuScene {
+impl<'a> MainMenuScene<'a> {
+    pub fn new() -> MainMenuScene<'a> {
         MainMenuScene {
             font_index: 0,
-            load_game_scene: false,
+            buttons: vec![],
             is_done: false,
         }
     }
 
-    fn draw_title(&self, canvas: &mut WindowCanvas, texture_creator: &TextureCreator<sdl2::video::WindowContext>, font: &Font) {
+    fn draw_title(
+        &self,
+        canvas: &mut WindowCanvas,
+        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        font: &Font,
+    ) {
         let title_text = font
             .render("Space Invaders!")
             .solid(Colour::RGB(255, 255, 255))
@@ -53,7 +160,7 @@ impl MainMenuScene {
     }
 }
 
-impl Scene for MainMenuScene {
+impl Scene for MainMenuScene<'_> {
     fn is_done(&self) -> bool {
         self.is_done
     }
@@ -81,13 +188,58 @@ impl Scene for MainMenuScene {
         (vec![], fonts)
     }
 
-    fn on_late_load(&mut self, _canvas: &WindowCanvas, _textures: &[Texture], _fonts: &[Font]) {}
+    fn on_late_load(&mut self, canvas: &WindowCanvas, _textures: &[Texture], _fonts: &[Font]) {
+        self.buttons.push(Button::new(
+            canvas.viewport().width() / 2,
+            canvas.viewport().height() / 2,
+            400,
+            150,
+            "Play",
+            0.75,
+        ));
+        self.buttons.last_mut().unwrap().set_colours(
+            Colour::BLACK,
+            Colour::BLACK,
+            Colour::BLACK,
+            Colour::YELLOW,
+            Colour::GREEN,
+            Colour::WHITE,
+        );
+
+        self.buttons.push(Button::new(
+            canvas.viewport().width() / 2,
+            canvas.viewport().height() / 4 * 3,
+            400,
+            150,
+            "Quit",
+            0.75,
+        ));
+        self.buttons.last_mut().unwrap().set_colours(
+            Colour::BLACK,
+            Colour::BLACK,
+            Colour::BLACK,
+            Colour::YELLOW,
+            Colour::GREEN,
+            Colour::RED,
+        );
+    }
 
     fn process_input(&mut self, input_state: &InputState) {
-        if input_state.is_key_down(Scancode::Return) {
-            self.load_game_scene = true;
-        } else if input_state.is_key_down(Scancode::Escape) {
+        if input_state.is_key_down(Scancode::Escape) {
             self.is_done = true;
+        }
+
+        for button in &mut self.buttons {
+            button.is_hovered = false;
+            button.is_clicked = false;
+
+            if button.is_mouse_over(input_state) {
+                button.is_hovered = true;
+
+                if input_state.is_mouse_button_down(sdl2::mouse::MouseButton::Left) {
+                    button.is_clicked = true;
+                }
+            }
         }
     }
 
@@ -97,9 +249,13 @@ impl Scene for MainMenuScene {
         scene_queue: &mut VecDeque<Box<dyn Scene>>,
         _canvas: &WindowCanvas,
     ) {
-        if self.load_game_scene {
+        if self.buttons.first().unwrap().is_clicked {
             self.is_done = true;
             scene_queue.push_back(Box::new(SpaceScene::new()));
+        }
+
+        if self.buttons.last().unwrap().is_clicked {
+            self.is_done = true;
         }
     }
 
@@ -114,5 +270,9 @@ impl Scene for MainMenuScene {
         canvas.clear();
 
         self.draw_title(canvas, texture_creator, &fonts[self.font_index]);
+
+        for button in &self.buttons {
+            button.draw(canvas, texture_creator, &fonts[self.font_index]);
+        }
     }
 }
