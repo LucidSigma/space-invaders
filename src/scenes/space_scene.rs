@@ -6,7 +6,7 @@ use std::fs;
 
 use sdl2::{
     keyboard::Scancode,
-    mixer::{Channel, Chunk},
+    mixer::{Channel, Chunk, Music},
     pixels::Color as Colour,
     rect::{Point, Rect},
     render::{Texture, TextureCreator, WindowCanvas},
@@ -25,7 +25,7 @@ const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 const MAX_PLAYER_LIVES: u32 = 3;
 const LEVEL_RESET_TIME: f32 = 1.0;
 
-pub struct SpaceScene {
+pub struct SpaceScene<'a> {
     has_window_focus: bool,
     is_done: bool,
 
@@ -39,10 +39,11 @@ pub struct SpaceScene {
     aliens: Vec<Alien>,
 
     level_win_sound: Option<Chunk>,
+    music: Option<Music<'a>>,
 }
 
-impl SpaceScene {
-    pub fn new() -> SpaceScene {
+impl<'a> SpaceScene<'a> {
+    pub fn new() -> SpaceScene<'a> {
         SpaceScene {
             has_window_focus: true,
             is_done: false,
@@ -90,6 +91,7 @@ impl SpaceScene {
             },
             aliens: vec![],
             level_win_sound: None,
+            music: None,
         }
     }
 
@@ -377,7 +379,7 @@ impl SpaceScene {
     }
 }
 
-impl Scene for SpaceScene {
+impl Scene for SpaceScene<'_> {
     fn is_done(&self) -> bool {
         self.is_done
     }
@@ -444,6 +446,8 @@ impl Scene for SpaceScene {
             }
         }
 
+        self.music = Some(Music::from_file("assets/sounds/music/Werq.mp3").unwrap());
+
         (textures, vec![])
     }
 
@@ -465,6 +469,11 @@ impl Scene for SpaceScene {
         self.alien_data.bullet_data.height = alien_bullet_texture_data.height;
 
         self.setup_objects(canvas);
+        self.music.as_ref().unwrap().play(-1).unwrap();
+    }
+
+    fn on_unload(&mut self) {
+        Music::halt();
     }
 
     fn poll_event(&mut self, event: sdl2::event::Event) {

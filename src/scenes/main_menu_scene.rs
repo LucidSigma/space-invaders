@@ -5,7 +5,7 @@ use std::fs;
 
 use sdl2::{
     keyboard::Scancode,
-    mixer::{Channel, Chunk},
+    mixer::{Channel, Chunk, Music},
     mouse::MouseButton,
     pixels::Color as Colour,
     rect::{Point, Rect},
@@ -28,6 +28,8 @@ pub struct MainMenuScene<'a> {
 
     button_hover_sound: Option<Chunk>,
     button_select_sound: Option<Chunk>,
+
+    music: Option<Music<'a>>,
 }
 
 impl<'a> MainMenuScene<'a> {
@@ -38,6 +40,7 @@ impl<'a> MainMenuScene<'a> {
             is_done: false,
             button_hover_sound: None,
             button_select_sound: None,
+            music: None,
         }
     }
 
@@ -119,6 +122,8 @@ impl Scene for MainMenuScene<'_> {
             }
         }
 
+        self.music = Some(Music::from_file("assets/sounds/music/Chill Wave.mp3").unwrap());
+
         (vec![], fonts)
     }
 
@@ -156,6 +161,12 @@ impl Scene for MainMenuScene<'_> {
             Colour::GREEN,
             Colour::RED,
         );
+
+        self.music.as_ref().unwrap().play(-1).unwrap();
+    }
+
+    fn on_unload(&mut self) {
+        Music::halt();
     }
 
     fn process_input(&mut self, input_state: &InputState) {

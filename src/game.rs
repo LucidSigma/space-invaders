@@ -63,7 +63,7 @@ fn initialise_sdl() -> Result<
 > {
     let sdl_context = sdl2::init()?;
     let image_context = image::init(image::InitFlag::PNG)?;
-    let mixer_context = mixer::init(mixer::InitFlag::OGG)?;
+    let mixer_context = mixer::init(mixer::InitFlag::MP3)?;
     mixer::open_audio(
         mixer::DEFAULT_FREQUENCY,
         mixer::DEFAULT_FORMAT,
