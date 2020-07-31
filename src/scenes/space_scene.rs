@@ -38,6 +38,8 @@ pub struct SpaceScene<'a> {
     alien_data: AlienData,
     aliens: Vec<Alien>,
 
+    font_index: usize,
+
     level_win_sound: Option<Chunk>,
     music: Option<Music<'a>>,
 }
@@ -89,6 +91,7 @@ impl<'a> SpaceScene<'a> {
                 pass_sound: None,
                 shift_sound: None,
             },
+            font_index: 0,
             aliens: vec![],
             level_win_sound: None,
             music: None,
@@ -377,6 +380,84 @@ impl<'a> SpaceScene<'a> {
                 .unwrap();
         }
     }
+
+    fn draw_text_overlay(
+        &self,
+        canvas: &mut WindowCanvas,
+        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        font: &Font,
+    ) {
+        const OVERLAY_OFFSET: i32 = 10;
+        const TEXT_SCALE: u32 = 4;
+
+        let lives_text = font
+            .render(format!("Lives: {}", self.player_lives).as_str())
+            .solid(Colour::RED)
+            .unwrap();
+        let lives_texture = texture_creator
+            .create_texture_from_surface(lives_text)
+            .unwrap();
+        let lives_texture_data = lives_texture.query();
+
+        canvas
+            .copy(
+                &lives_texture,
+                None,
+                Rect::new(
+                    OVERLAY_OFFSET,
+                    OVERLAY_OFFSET,
+                    lives_texture_data.width / TEXT_SCALE,
+                    lives_texture_data.height / TEXT_SCALE,
+                ),
+            )
+            .unwrap();
+
+        let level_text = font
+            .render(format!("Level: {}", self.current_level).as_str())
+            .solid(Colour::WHITE)
+            .unwrap();
+        let level_texture = texture_creator
+            .create_texture_from_surface(level_text)
+            .unwrap();
+        let level_texture_data = level_texture.query();
+
+        canvas
+            .copy(
+                &level_texture,
+                None,
+                Rect::new(
+                    OVERLAY_OFFSET,
+                    OVERLAY_OFFSET * 2 + lives_texture_data.height as i32 / TEXT_SCALE as i32,
+                    level_texture_data.width / TEXT_SCALE,
+                    level_texture_data.height / TEXT_SCALE,
+                ),
+            )
+            .unwrap();
+
+        let aliens_text = font
+            .render(format!("Aliens: {}", self.aliens.len()).as_str())
+            .solid(Colour::GREEN)
+            .unwrap();
+        let aliens_texture = texture_creator
+            .create_texture_from_surface(aliens_text)
+            .unwrap();
+        let aliens_texture_data = aliens_texture.query();
+
+        canvas
+            .copy(
+                &aliens_texture,
+                None,
+                Rect::from_center(
+                    Point::new(
+                        canvas.viewport().width() as i32 / 2,
+                        OVERLAY_OFFSET + aliens_texture_data.height as i32 / TEXT_SCALE as i32 / 2,
+                    ),
+                    aliens_texture_data.width / TEXT_SCALE,
+                    aliens_texture_data.height / TEXT_SCALE,
+                ),
+            )
+            .unwrap();
+    }
 }
 
 impl Scene for SpaceScene<'_> {
@@ -386,6 +467,7 @@ impl Scene for SpaceScene<'_> {
 
     fn on_load(&mut self, _canvas: &WindowCanvas) -> (Vec<String>, Vec<String>) {
         let mut textures = vec![];
+        let mut fonts = vec![];
 
         for (current_index, texture_file) in fs::read_dir("assets/textures").unwrap().enumerate() {
             let texture_file = texture_file.unwrap();
@@ -406,6 +488,23 @@ impl Scene for SpaceScene<'_> {
             }
 
             textures.push(texture_filepath.to_str().unwrap().to_owned());
+        }
+
+        for (current_index, font_file) in fs::read_dir("assets/fonts").unwrap().enumerate() {
+            let font_file = font_file.unwrap();
+            let font_filepath = font_file.path();
+            let font_filepath_string = font_filepath
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
+
+            if font_filepath_string == "Recursive.ttf" {
+                self.font_index = current_index;
+            }
+
+            fonts.push(font_filepath.to_str().unwrap().to_owned());
         }
 
         for sound_file in fs::read_dir("assets/sounds/effects/game").unwrap() {
@@ -448,7 +547,7 @@ impl Scene for SpaceScene<'_> {
 
         self.music = Some(Music::from_file("assets/sounds/music/Werq.mp3").unwrap());
 
-        (textures, vec![])
+        (textures, fonts)
     }
 
     fn on_late_load(&mut self, canvas: &WindowCanvas, textures: &[Texture], _fonts: &[Font]) {
@@ -575,9 +674,9 @@ impl Scene for SpaceScene<'_> {
     fn draw(
         &mut self,
         canvas: &mut WindowCanvas,
-        _texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
         textures: &[sdl2::render::Texture],
-        _fonts: &[Font],
+        fonts: &[Font],
     ) {
         if !self.has_window_focus {
             return;
@@ -593,5 +692,7 @@ impl Scene for SpaceScene<'_> {
         );
         self.draw_aliens(canvas, &textures[self.alien_data.texture_index]);
         self.draw_spaceship(canvas, &textures[self.spaceship.texture_index]);
+
+        self.draw_text_overlay(canvas, texture_creator, &fonts[self.font_index]);
     }
 }
