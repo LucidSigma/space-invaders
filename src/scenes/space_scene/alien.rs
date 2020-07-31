@@ -1,3 +1,5 @@
+use sdl2::mixer::Chunk;
+
 pub const ALIEN_ROW_COUNT: u32 = 4;
 pub const INITIAL_ALIEN_VELOCITY: f32 = 100.0;
 pub const PER_LEVEL_ALIEN_VELOCITY_INCREASE: f32 = 20.0;
@@ -41,5 +43,8 @@ pub struct AlienData {
     pub has_hit_bottom: bool,
 
     pub texture_index: usize,
-    pub death_sound: Option<sdl2::mixer::Chunk>,
+
+    pub death_sound: Option<Chunk>,
+    pub pass_sound: Option<Chunk>,
+    pub shift_sound: Option<Chunk>,
 }

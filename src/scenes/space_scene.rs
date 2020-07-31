@@ -74,6 +74,8 @@ impl SpaceScene {
                 has_hit_bottom: false,
                 texture_index: 0,
                 death_sound: None,
+                pass_sound: None,
+                shift_sound: None,
             },
             aliens: vec![],
         }
@@ -243,6 +245,10 @@ impl SpaceScene {
             if alien_rect.y() as u32 + alien_rect.height() >= canvas.viewport().height() {
                 self.alien_data.has_hit_bottom = true;
                 self.level_reset_timeout = LEVEL_RESET_TIME;
+
+                sound_channel
+                    .play(self.alien_data.pass_sound.as_ref().unwrap(), 0)
+                    .unwrap();
             }
         }
 
@@ -265,6 +271,10 @@ impl SpaceScene {
             self.alien_data.velocity += ALIEN_VELOCITY_INCREMENT;
             self.alien_data.direction = AlienDirection::Down;
             self.alien_data.dropdown_distance = ALIEN_DROPDOWN_DISTANCE;
+
+            sound_channel
+                .play(self.alien_data.shift_sound.as_ref().unwrap(), 0)
+                .unwrap();
         }
     }
 
@@ -337,15 +347,23 @@ impl Scene for SpaceScene {
                 .unwrap()
                 .to_owned();
 
+            let loaded_sound_chunk = Some(Chunk::from_file(sound_filepath).unwrap());
+
             match sound_filepath_string.as_ref() {
                 "player_shoot.wav" => {
-                    self.spaceship.shoot_sound = Some(Chunk::from_file(sound_filepath).unwrap());
+                    self.spaceship.shoot_sound = loaded_sound_chunk;
                 }
                 "player_death.wav" => {
-                    self.spaceship.death_sound = Some(Chunk::from_file(sound_filepath).unwrap());
+                    self.spaceship.death_sound = loaded_sound_chunk;
                 }
                 "alien_death.wav" => {
-                    self.alien_data.death_sound = Some(Chunk::from_file(sound_filepath).unwrap());
+                    self.alien_data.death_sound = loaded_sound_chunk;
+                }
+                "alien_pass.wav" => {
+                    self.alien_data.pass_sound = loaded_sound_chunk;
+                }
+                "alien_shift.wav" => {
+                    self.alien_data.shift_sound = loaded_sound_chunk;
                 }
                 _ => (),
             }

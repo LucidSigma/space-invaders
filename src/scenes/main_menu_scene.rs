@@ -5,6 +5,7 @@ use std::fs;
 
 use sdl2::{
     keyboard::Scancode,
+    mouse::MouseButton,
     pixels::Color as Colour,
     rect::{Point, Rect},
     render::{Texture, TextureCreator, WindowCanvas},
@@ -140,7 +141,7 @@ impl Scene for MainMenuScene<'_> {
             if button.is_mouse_over(input_state) {
                 button.is_hovered = true;
 
-                if input_state.is_mouse_button_down(sdl2::mouse::MouseButton::Left) {
+                if input_state.is_mouse_button_down(MouseButton::Left) {
                     button.is_clicked = true;
                 }
             }
