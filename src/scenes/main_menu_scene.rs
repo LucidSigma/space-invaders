@@ -5,6 +5,7 @@ use std::fs;
 
 use sdl2::{
     keyboard::Scancode,
+    mixer::{Channel, Chunk},
     mouse::MouseButton,
     pixels::Color as Colour,
     rect::{Point, Rect},
@@ -24,6 +25,9 @@ pub struct MainMenuScene<'a> {
     buttons: Vec<Button<'a>>,
 
     is_done: bool,
+
+    button_hover_sound: Option<Chunk>,
+    button_select_sound: Option<Chunk>,
 }
 
 impl<'a> MainMenuScene<'a> {
@@ -32,6 +36,8 @@ impl<'a> MainMenuScene<'a> {
             font_index: 0,
             buttons: vec![],
             is_done: false,
+            button_hover_sound: None,
+            button_select_sound: None,
         }
     }
 
@@ -90,6 +96,29 @@ impl Scene for MainMenuScene<'_> {
             fonts.push(font_filepath.to_str().unwrap().to_owned());
         }
 
+        for sound_file in fs::read_dir("assets/sounds/effects/menu").unwrap() {
+            let sound_file = sound_file.unwrap();
+            let sound_filepath = sound_file.path();
+            let sound_filepath_string = sound_filepath
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned();
+
+            let loaded_sound_chunk = Some(Chunk::from_file(sound_filepath).unwrap());
+
+            match sound_filepath_string.as_ref() {
+                "button_hover.wav" => {
+                    self.button_hover_sound = loaded_sound_chunk;
+                }
+                "button_select.wav" => {
+                    self.button_select_sound = loaded_sound_chunk;
+                }
+                _ => (),
+            }
+        }
+
         (vec![], fonts)
     }
 
@@ -144,6 +173,8 @@ impl Scene for MainMenuScene<'_> {
                 if input_state.is_mouse_button_down(MouseButton::Left) {
                     button.is_clicked = true;
                 }
+            } else if button.played_enter_sound {
+                button.played_enter_sound = false;
             }
         }
     }
@@ -153,11 +184,24 @@ impl Scene for MainMenuScene<'_> {
         _delta_time: f32,
         scene_queue: &mut VecDeque<Box<dyn Scene>>,
         _canvas: &WindowCanvas,
-        _sound_channel: &sdl2::mixer::Channel,
+        sound_channel: &Channel,
     ) {
+        for button in &mut self.buttons {
+            if button.is_hovered && !button.played_enter_sound {
+                sound_channel
+                    .play(self.button_hover_sound.as_ref().unwrap(), 0)
+                    .unwrap();
+                button.played_enter_sound = true;
+            }
+        }
+
         if self.buttons.first().unwrap().is_clicked {
             self.is_done = true;
             scene_queue.push_back(Box::new(SpaceScene::new()));
+
+            sound_channel
+                .play(self.button_select_sound.as_ref().unwrap(), 0)
+                .unwrap();
         }
 
         if self.buttons.last().unwrap().is_clicked {

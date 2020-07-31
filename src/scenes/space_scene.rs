@@ -337,7 +337,7 @@ impl Scene for SpaceScene {
             textures.push(texture_filepath.to_str().unwrap().to_owned());
         }
 
-        for sound_file in fs::read_dir("assets/sounds/effects").unwrap() {
+        for sound_file in fs::read_dir("assets/sounds/effects/game").unwrap() {
             let sound_file = sound_file.unwrap();
             let sound_filepath = sound_file.path();
             let sound_filepath_string = sound_filepath

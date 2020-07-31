@@ -12,6 +12,7 @@ pub struct Button<'a> {
 
     pub is_hovered: bool,
     pub is_clicked: bool,
+    pub played_enter_sound: bool,
 
     text_colour: Colour,
     hovered_text_colour: Colour,
@@ -31,6 +32,7 @@ impl Button<'_> {
             text_scale,
             is_hovered: false,
             is_clicked: false,
+            played_enter_sound: false,
             text_colour: Colour::BLACK,
             hovered_text_colour: Colour::BLACK,
             clicked_text_colour: Colour::BLACK,
