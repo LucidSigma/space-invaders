@@ -369,9 +369,11 @@ impl SpaceScene {
     }
 
     fn draw_spaceship(&self, canvas: &mut WindowCanvas, spaceship_texture: &Texture) {
-        canvas
-            .copy(spaceship_texture, None, self.spaceship.rect)
-            .unwrap();
+        if !self.spaceship.is_hit {
+            canvas
+                .copy(spaceship_texture, None, self.spaceship.rect)
+                .unwrap();
+        }
     }
 }
 
