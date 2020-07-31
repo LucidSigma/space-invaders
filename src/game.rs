@@ -116,7 +116,7 @@ fn play_loop(
 
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
     let mut current_scene = initial_scene;
-    let (texture_paths, font_paths) = current_scene.on_load(&canvas);
+    let (texture_paths, font_paths) = current_scene.on_load(&canvas, None);
 
     let mut textures = create_textures(&texture_creator, &texture_paths);
     let mut fonts = create_fonts(ttf_context, &font_paths);
@@ -295,11 +295,11 @@ fn update_scene_queue(
     is_running: &mut bool,
 ) -> Option<(Vec<String>, Vec<String>)> {
     if current_scene.is_done() {
-        current_scene.on_unload();
+        let previous_scene_payload = current_scene.on_unload();
 
         if !scene_queue.is_empty() {
             *current_scene = scene_queue.pop_front().unwrap();
-            Some(current_scene.on_load(canvas))
+            Some(current_scene.on_load(canvas, previous_scene_payload))
         } else {
             *is_running = false;
 

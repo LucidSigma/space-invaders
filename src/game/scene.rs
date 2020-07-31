@@ -8,9 +8,16 @@ use super::input::InputState;
 pub trait Scene {
     fn is_done(&self) -> bool;
 
-    fn on_load(&mut self, canvas: &WindowCanvas) -> (Vec<String>, Vec<String>);
+    fn on_load(
+        &mut self,
+        canvas: &WindowCanvas,
+        previous_scene_payload: Option<i32>,
+    ) -> (Vec<String>, Vec<String>);
     fn on_late_load(&mut self, _canvas: &WindowCanvas, _textures: &[Texture], _fonts: &[Font]) {}
-    fn on_unload(&mut self) {}
+
+    fn on_unload(&mut self) -> Option<i32> {
+        None
+    }
 
     fn poll_event(&mut self, _event: sdl2::event::Event) {}
     fn process_input(&mut self, input_state: &InputState);

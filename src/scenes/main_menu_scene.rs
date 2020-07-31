@@ -79,7 +79,11 @@ impl Scene for MainMenuScene<'_> {
         self.is_done
     }
 
-    fn on_load(&mut self, _canvas: &WindowCanvas) -> (Vec<String>, Vec<String>) {
+    fn on_load(
+        &mut self,
+        _canvas: &WindowCanvas,
+        _previous_scene_payload: Option<i32>,
+    ) -> (Vec<String>, Vec<String>) {
         let mut fonts = vec![];
 
         for (current_index, font_file) in fs::read_dir("assets/fonts").unwrap().enumerate() {
@@ -165,8 +169,10 @@ impl Scene for MainMenuScene<'_> {
         self.music.as_ref().unwrap().play(-1).unwrap();
     }
 
-    fn on_unload(&mut self) {
+    fn on_unload(&mut self) -> Option<i32> {
         Music::halt();
+
+        None
     }
 
     fn process_input(&mut self, input_state: &InputState) {

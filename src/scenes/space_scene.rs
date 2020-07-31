@@ -465,7 +465,11 @@ impl Scene for SpaceScene<'_> {
         self.is_done
     }
 
-    fn on_load(&mut self, _canvas: &WindowCanvas) -> (Vec<String>, Vec<String>) {
+    fn on_load(
+        &mut self,
+        _canvas: &WindowCanvas,
+        _previous_scene_payload: Option<i32>,
+    ) -> (Vec<String>, Vec<String>) {
         let mut textures = vec![];
         let mut fonts = vec![];
 
@@ -571,8 +575,10 @@ impl Scene for SpaceScene<'_> {
         self.music.as_ref().unwrap().play(-1).unwrap();
     }
 
-    fn on_unload(&mut self) {
+    fn on_unload(&mut self) -> Option<i32> {
         Music::halt();
+
+        None
     }
 
     fn poll_event(&mut self, event: sdl2::event::Event) {
