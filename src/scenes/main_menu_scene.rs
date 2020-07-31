@@ -1,5 +1,3 @@
-mod button;
-
 use std::collections::VecDeque;
 use std::fs;
 
@@ -13,7 +11,7 @@ use sdl2::{
     ttf::Font,
 };
 
-use self::button::Button;
+use super::button::Button;
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
 use crate::scenes::space_scene::SpaceScene;
