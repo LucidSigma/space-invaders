@@ -9,6 +9,7 @@ pub const PER_LEVEL_ALIEN_VELOCITY_INCREASE: f32 = 20.0;
 pub const ALIEN_VELOCITY_INCREMENT: f32 = 10.0;
 pub const ALIEN_DROPDOWN_DISTANCE: f32 = 40.0;
 pub const ALIEN_SHOOT_INTERVAL: f32 = 10.0;
+pub const ALIEN_BASE_POINTS: u32 = 25;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AlienDirection {

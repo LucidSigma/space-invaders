@@ -24,6 +24,7 @@ const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
 const INITIAL_PLAYER_LIVES: u32 = 3;
 const LEVEL_RESET_TIME: f32 = 1.0;
+const LEVEL_COMPLETE_POINTS: u32 = 100;
 
 pub struct SpaceScene<'a> {
     has_window_focus: bool,
@@ -32,6 +33,7 @@ pub struct SpaceScene<'a> {
     current_level: u32,
     player_lives: u32,
     level_reset_timeout: f32,
+    score: u32,
 
     spaceship: Spaceship,
     spaceship_size: (u32, u32),
@@ -52,6 +54,7 @@ impl<'a> SpaceScene<'a> {
             current_level: 1,
             player_lives: INITIAL_PLAYER_LIVES,
             level_reset_timeout: 0.0,
+            score: 0,
 
             spaceship: Spaceship {
                 rect: Rect::new(0, 0, 0, 0),
@@ -255,6 +258,7 @@ impl<'a> SpaceScene<'a> {
                 if alien_rect.intersection(bullet_rect).is_some() {
                     alien.is_hit = true;
                     bullet.has_hit_something = true;
+                    self.score += ALIEN_BASE_POINTS + (self.current_level - 1);
 
                     sound_channel
                         .play(self.alien_data.death_sound.as_ref().unwrap(), 0)
@@ -265,6 +269,7 @@ impl<'a> SpaceScene<'a> {
             if alien_rect.intersection(self.spaceship.rect).is_some() {
                 alien.is_hit = true;
                 self.spaceship.is_hit = true;
+                self.score += ALIEN_BASE_POINTS + (self.current_level - 1);
                 self.level_reset_timeout = LEVEL_RESET_TIME;
 
                 sound_channel
@@ -457,6 +462,30 @@ impl<'a> SpaceScene<'a> {
                 ),
             )
             .unwrap();
+
+        let score_text = font
+            .render(format!("Score: {}", self.score).as_str())
+            .solid(Colour::YELLOW)
+            .unwrap();
+        let score_texture = texture_creator
+            .create_texture_from_surface(score_text)
+            .unwrap();
+        let score_texture_data = score_texture.query();
+
+        canvas
+            .copy(
+                &score_texture,
+                None,
+                Rect::new(
+                    canvas.viewport().width() as i32
+                        - OVERLAY_OFFSET
+                        - score_texture_data.width as i32 / TEXT_SCALE as i32,
+                    OVERLAY_OFFSET,
+                    score_texture_data.width / TEXT_SCALE,
+                    score_texture_data.height / TEXT_SCALE,
+                ),
+            )
+            .unwrap();
     }
 }
 
@@ -578,7 +607,7 @@ impl Scene for SpaceScene<'_> {
     fn on_unload(&mut self) -> Option<i32> {
         Music::halt();
 
-        None
+        Some(self.score as i32)
     }
 
     fn poll_event(&mut self, event: sdl2::event::Event) {
@@ -638,6 +667,7 @@ impl Scene for SpaceScene<'_> {
                 .retain(|bullet| bullet.y < bullet_delete_threshold && !bullet.has_hit_something);
 
             if self.aliens.is_empty() {
+                self.score += LEVEL_COMPLETE_POINTS * self.current_level;
                 self.level_reset_timeout = LEVEL_RESET_TIME;
                 sound_channel
                     .play(self.level_win_sound.as_ref().unwrap(), 0)
