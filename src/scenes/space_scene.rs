@@ -22,7 +22,7 @@ use crate::scenes::main_menu_scene::MainMenuScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
-const MAX_PLAYER_LIVES: u32 = 3;
+const INITIAL_PLAYER_LIVES: u32 = 3;
 const LEVEL_RESET_TIME: f32 = 1.0;
 
 pub struct SpaceScene<'a> {
@@ -50,7 +50,7 @@ impl<'a> SpaceScene<'a> {
             has_window_focus: true,
             is_done: false,
             current_level: 1,
-            player_lives: MAX_PLAYER_LIVES,
+            player_lives: INITIAL_PLAYER_LIVES,
             level_reset_timeout: 0.0,
 
             spaceship: Spaceship {
@@ -652,10 +652,7 @@ impl Scene for SpaceScene<'_> {
         if self.level_reset_timeout <= 0.0 {
             if self.aliens.is_empty() {
                 self.current_level += 1;
-
-                if self.player_lives < MAX_PLAYER_LIVES {
-                    self.player_lives += 1;
-                }
+                self.player_lives += 1;
 
                 self.setup_objects(canvas);
             } else if self.spaceship.is_hit || self.alien_data.has_hit_bottom {
