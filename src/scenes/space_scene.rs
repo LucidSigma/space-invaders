@@ -37,6 +37,8 @@ pub struct SpaceScene {
     spaceship_size: (u32, u32),
     alien_data: AlienData,
     aliens: Vec<Alien>,
+
+    level_win_sound: Option<Chunk>,
 }
 
 impl SpaceScene {
@@ -78,6 +80,7 @@ impl SpaceScene {
                 shift_sound: None,
             },
             aliens: vec![],
+            level_win_sound: None,
         }
     }
 
@@ -365,6 +368,9 @@ impl Scene for SpaceScene {
                 "alien_shift.wav" => {
                     self.alien_data.shift_sound = loaded_sound_chunk;
                 }
+                "level_win.wav" => {
+                    self.level_win_sound = loaded_sound_chunk;
+                }
                 _ => (),
             }
         }
@@ -441,6 +447,9 @@ impl Scene for SpaceScene {
 
             if self.aliens.is_empty() {
                 self.level_reset_timeout = LEVEL_RESET_TIME;
+                sound_channel
+                    .play(self.level_win_sound.as_ref().unwrap(), 0)
+                    .unwrap();
             }
         } else {
             self.level_reset_timeout -= delta_time;
