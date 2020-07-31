@@ -22,7 +22,7 @@ use crate::scenes::main_menu_scene::MainMenuScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
-const INITIAL_PLAYER_LIVES: u32 = 3;
+const MAX_PLAYER_LIVES: u32 = 3;
 const LEVEL_RESET_TIME: f32 = 1.0;
 
 pub struct SpaceScene {
@@ -47,8 +47,9 @@ impl SpaceScene {
             has_window_focus: true,
             is_done: false,
             current_level: 1,
-            player_lives: INITIAL_PLAYER_LIVES,
+            player_lives: MAX_PLAYER_LIVES,
             level_reset_timeout: 0.0,
+
             spaceship: Spaceship {
                 rect: Rect::new(0, 0, 0, 0),
                 x_velocity: 0.0,
@@ -66,6 +67,7 @@ impl SpaceScene {
                 death_sound: None,
             },
             spaceship_size: (0, 0),
+
             alien_data: AlienData {
                 width: 0,
                 height: 0,
@@ -75,6 +77,13 @@ impl SpaceScene {
                 dropdown_distance: 0.0,
                 has_hit_bottom: false,
                 texture_index: 0,
+                bullet_data: BulletData {
+                    width: 0,
+                    height: 0,
+                    texture_index: 0,
+                },
+                bullets: vec![],
+                shoot_sound: None,
                 death_sound: None,
                 pass_sound: None,
                 shift_sound: None,
@@ -107,6 +116,7 @@ impl SpaceScene {
         self.alien_data.velocity = INITIAL_ALIEN_VELOCITY
             + (self.current_level - 1) as f32 * PER_LEVEL_ALIEN_VELOCITY_INCREASE;
         self.alien_data.direction = AlienDirection::Right;
+        self.alien_data.bullets.clear();
         self.alien_data.next_direction = None;
         self.alien_data.dropdown_distance = 0.0;
         self.alien_data.has_hit_bottom = false;
@@ -208,6 +218,22 @@ impl SpaceScene {
                 }
             }
 
+            alien.shoot_delay -= delta_time;
+
+            if alien.shoot_delay <= 0.0 {
+                alien.shoot_delay = ALIEN_SHOOT_INTERVAL;
+
+                self.alien_data.bullets.push(Bullet {
+                    x: alien.x as f32,
+                    y: alien.y as f32,
+                    has_hit_something: false,
+                });
+
+                sound_channel
+                    .play(self.alien_data.shoot_sound.as_ref().unwrap(), 0)
+                    .unwrap();
+            }
+
             let alien_rect = sdl2::rect::Rect::from_center(
                 sdl2::rect::Point::new(alien.x as i32, alien.y as i32),
                 self.alien_data.width,
@@ -279,9 +305,46 @@ impl SpaceScene {
                 .play(self.alien_data.shift_sound.as_ref().unwrap(), 0)
                 .unwrap();
         }
+
+        for bullet in &mut self.alien_data.bullets {
+            bullet.y += delta_time * BULLET_VELOCITY;
+
+            let bullet_rect = sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
+                self.spaceship.bullet_data.width,
+                self.spaceship.bullet_data.height,
+            );
+
+            if bullet_rect.intersection(self.spaceship.rect).is_some() {
+                self.spaceship.is_hit = true;
+                self.level_reset_timeout = LEVEL_RESET_TIME;
+                bullet.has_hit_something = true;
+
+                sound_channel
+                    .play(self.spaceship.death_sound.as_ref().unwrap(), 0)
+                    .unwrap();
+            }
+        }
     }
 
-    fn draw_bullets(&self, canvas: &mut WindowCanvas, bullet_texture: &Texture) {
+    fn draw_bullets(
+        &self,
+        canvas: &mut WindowCanvas,
+        bullet_texture: &Texture,
+        alien_bullet_texture: &Texture,
+    ) {
+        for bullet in &self.alien_data.bullets {
+            let bullet_rect = sdl2::rect::Rect::from_center(
+                sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
+                self.spaceship.bullet_data.width,
+                self.spaceship.bullet_data.height,
+            );
+
+            canvas
+                .copy(alien_bullet_texture, None, bullet_rect)
+                .unwrap();
+        }
+
         for bullet in &self.spaceship.bullets {
             let bullet_rect = sdl2::rect::Rect::from_center(
                 sdl2::rect::Point::new(bullet.x as i32, bullet.y as i32),
@@ -334,6 +397,7 @@ impl Scene for SpaceScene {
                 "ship.png" => self.spaceship.texture_index = current_index,
                 "bullet.png" => self.spaceship.bullet_data.texture_index = current_index,
                 "alien.png" => self.alien_data.texture_index = current_index,
+                "alien_bullet.png" => self.alien_data.bullet_data.texture_index = current_index,
                 _ => (),
             }
 
@@ -359,6 +423,9 @@ impl Scene for SpaceScene {
                 "player_death.wav" => {
                     self.spaceship.death_sound = loaded_sound_chunk;
                 }
+                "alien_shoot.wav" => {
+                    self.alien_data.shoot_sound = loaded_sound_chunk;
+                }
                 "alien_death.wav" => {
                     self.alien_data.death_sound = loaded_sound_chunk;
                 }
@@ -382,6 +449,8 @@ impl Scene for SpaceScene {
         let spaceship_texture_data = &textures[self.spaceship.texture_index].query();
         let bullet_texture_data = &textures[self.spaceship.bullet_data.texture_index].query();
         let alien_texture_data = &textures[self.alien_data.texture_index].query();
+        let alien_bullet_texture_data =
+            &textures[self.alien_data.bullet_data.texture_index].query();
 
         self.spaceship_size = (spaceship_texture_data.width, spaceship_texture_data.height);
 
@@ -390,6 +459,8 @@ impl Scene for SpaceScene {
 
         self.alien_data.width = alien_texture_data.width;
         self.alien_data.height = alien_texture_data.height;
+        self.alien_data.bullet_data.width = alien_bullet_texture_data.width;
+        self.alien_data.bullet_data.height = alien_bullet_texture_data.height;
 
         self.setup_objects(canvas);
     }
@@ -444,6 +515,11 @@ impl Scene for SpaceScene {
                 .retain(|bullet| bullet.y > bullet_delete_threshold && !bullet.has_hit_something);
 
             self.aliens.retain(|alien| !alien.is_hit);
+            let bullet_delete_threshold =
+                canvas.viewport().height() as f32 - bullet_delete_threshold;
+            self.alien_data
+                .bullets
+                .retain(|bullet| bullet.y < bullet_delete_threshold && !bullet.has_hit_something);
 
             if self.aliens.is_empty() {
                 self.level_reset_timeout = LEVEL_RESET_TIME;
@@ -466,6 +542,11 @@ impl Scene for SpaceScene {
         if self.level_reset_timeout <= 0.0 {
             if self.aliens.is_empty() {
                 self.current_level += 1;
+
+                if self.player_lives < MAX_PLAYER_LIVES {
+                    self.player_lives += 1;
+                }
+
                 self.setup_objects(canvas);
             } else if self.spaceship.is_hit || self.alien_data.has_hit_bottom {
                 self.player_lives -= 1;
@@ -494,7 +575,11 @@ impl Scene for SpaceScene {
         canvas.set_draw_color(BACKGROUND_COLOUR);
         canvas.clear();
 
-        self.draw_bullets(canvas, &textures[self.spaceship.bullet_data.texture_index]);
+        self.draw_bullets(
+            canvas,
+            &textures[self.spaceship.bullet_data.texture_index],
+            &textures[self.alien_data.bullet_data.texture_index],
+        );
         self.draw_aliens(canvas, &textures[self.alien_data.texture_index]);
         self.draw_spaceship(canvas, &textures[self.spaceship.texture_index]);
     }
