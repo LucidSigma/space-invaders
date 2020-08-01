@@ -163,7 +163,7 @@ fn play_loop(
             &canvas,
             &sound_channel,
         );
-        
+
         draw(
             &mut current_scene,
             canvas,

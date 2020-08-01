@@ -48,10 +48,7 @@ impl<'a> MainMenuScene<'a> {
         texture_creator: &TextureCreator<sdl2::video::WindowContext>,
         font: &Font,
     ) {
-        let title_text = font
-            .render("Space Invaders!")
-            .solid(Colour::RGB(255, 255, 255))
-            .unwrap();
+        let title_text = font.render("Space Invaders!").solid(Colour::WHITE).unwrap();
         let title_texture = texture_creator
             .create_texture_from_surface(title_text)
             .unwrap();
@@ -246,6 +243,10 @@ impl Scene for MainMenuScene<'_> {
 
         if self.buttons.last().unwrap().is_clicked {
             self.is_done = true;
+
+            sound_channel
+                .play(self.button_select_sound.as_ref().unwrap(), 0)
+                .unwrap();
         }
     }
 

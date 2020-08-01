@@ -18,8 +18,8 @@ use self::spaceship::bullet::*;
 use self::spaceship::*;
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
-use crate::scenes::main_menu_scene::MainMenuScene;
 use crate::scenes::game_over_scene::GameOverScene;
+use crate::scenes::main_menu_scene::MainMenuScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
