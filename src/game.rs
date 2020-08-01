@@ -155,6 +155,7 @@ fn play_loop(
             &canvas,
             &sound_channel,
         );
+
         late_update(
             &mut current_scene,
             delta_time,
@@ -162,6 +163,7 @@ fn play_loop(
             &canvas,
             &sound_channel,
         );
+        
         draw(
             &mut current_scene,
             canvas,

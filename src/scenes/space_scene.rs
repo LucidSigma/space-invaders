@@ -19,6 +19,7 @@ use self::spaceship::*;
 use crate::game::input::InputState;
 use crate::game::scene::Scene;
 use crate::scenes::main_menu_scene::MainMenuScene;
+use crate::scenes::game_over_scene::GameOverScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
@@ -658,7 +659,7 @@ impl Scene for SpaceScene<'_> {
             return;
         }
 
-        if self.is_done {
+        if self.is_done && !self.spaceship.is_hit {
             scene_queue.push_back(Box::new(MainMenuScene::new()));
         }
 
@@ -710,7 +711,7 @@ impl Scene for SpaceScene<'_> {
                     self.setup_objects(canvas);
                 } else {
                     self.is_done = true;
-                    scene_queue.push_back(Box::new(MainMenuScene::new()));
+                    scene_queue.push_back(Box::new(GameOverScene::new()));
                 }
             }
         }
