@@ -14,7 +14,7 @@ use crate::scenes::main_menu_scene::MainMenuScene;
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
 
 pub struct GameOverScene {
-	player_score: u32,
+    player_score: u32,
 
 	is_done: bool,
 	font_index: usize,
@@ -39,7 +39,7 @@ impl GameOverScene {
 
         let title_text = font
             .render("Game Over!")
-            .solid(Colour::RGB(255, 255, 255))
+            .solid(Colour::WHITE)
             .unwrap();
         let title_texture = texture_creator
             .create_texture_from_surface(title_text)
@@ -53,6 +53,37 @@ impl GameOverScene {
                 None,
                 Rect::from_center(
                     Point::new(canvas.viewport().width() as i32 / 2, 128),
+                    (title_texture_data.width as f32 * TEXT_SCALE) as u32,
+                    (title_texture_data.height as f32 * TEXT_SCALE) as u32,
+                ),
+            )
+            .unwrap();
+    }
+
+    fn draw_score_text(
+        &self,
+        canvas: &mut WindowCanvas,
+        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        font: &Font,
+    ) {
+		const TEXT_SCALE: f32 = 0.25;
+
+        let title_text = font
+            .render(format!("Your final score was {}.", self.player_score).as_str())
+            .solid(Colour::YELLOW)
+            .unwrap();
+        let title_texture = texture_creator
+            .create_texture_from_surface(title_text)
+            .unwrap();
+
+        let title_texture_data = title_texture.query();
+
+        canvas
+            .copy(
+                &title_texture,
+                None,
+                Rect::from_center(
+                    Point::new(canvas.viewport().width() as i32 / 2, 256),
                     (title_texture_data.width as f32 * TEXT_SCALE) as u32,
                     (title_texture_data.height as f32 * TEXT_SCALE) as u32,
                 ),
@@ -106,7 +137,7 @@ impl Scene for GameOverScene {
         &mut self,
         _delta_time: f32,
         scene_queue: &mut VecDeque<Box<dyn Scene>>,
-        canvas: &WindowCanvas,
+        _canvas: &WindowCanvas,
         sound_channel: &sdl2::mixer::Channel,
     ) {
 		if self.is_done {
@@ -127,5 +158,6 @@ impl Scene for GameOverScene {
 		canvas.clear();
 		
 		self.draw_header(canvas, texture_creator, &fonts[self.font_index]);
+		self.draw_score_text(canvas, texture_creator, &fonts[self.font_index]);
 	}
 }
