@@ -76,6 +76,7 @@ impl Scene for MainMenuScene<'_> {
 
     fn on_load(
         &mut self,
+        _sdl_context: &sdl2::Sdl,
         _canvas: &WindowCanvas,
         _previous_scene_payload: Option<i32>,
     ) -> (Vec<String>, Vec<String>) {
@@ -164,7 +165,7 @@ impl Scene for MainMenuScene<'_> {
         self.music.as_ref().unwrap().play(-1).unwrap();
     }
 
-    fn on_unload(&mut self) -> Option<i32> {
+    fn on_unload(&mut self, _sdl_context: &sdl2::Sdl) -> Option<i32> {
         Music::halt();
 
         None

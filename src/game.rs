@@ -34,7 +34,13 @@ pub fn play(initial_scene: Box<dyn Scene>) {
     let mut canvas = initialise_canvas(&video_subsystem, &config).unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    play_loop(initial_scene, &mut canvas, &ttf_context, &mut event_pump);
+    play_loop(
+        &sdl_context,
+        initial_scene,
+        &mut canvas,
+        &ttf_context,
+        &mut event_pump,
+    );
 }
 
 fn read_config_file() -> Result<Config, Box<dyn Error>> {
@@ -106,6 +112,7 @@ fn initialise_canvas(
 }
 
 fn play_loop(
+    sdl_context: &sdl2::Sdl,
     initial_scene: Box<dyn Scene>,
     canvas: &mut WindowCanvas,
     ttf_context: &ttf::Sdl2TtfContext,
@@ -116,7 +123,7 @@ fn play_loop(
 
     let mut scene_queue = VecDeque::<Box<dyn Scene>>::new();
     let mut current_scene = initial_scene;
-    let (texture_paths, font_paths) = current_scene.on_load(&canvas, None);
+    let (texture_paths, font_paths) = current_scene.on_load(sdl_context, &canvas, None);
 
     let mut textures = create_textures(&texture_creator, &texture_paths);
     let mut fonts = create_fonts(ttf_context, &font_paths);
@@ -177,6 +184,7 @@ fn play_loop(
         mouse_y_scroll_amount = 0;
 
         if let Some(new_scene_resources) = update_scene_queue(
+            sdl_context,
             &mut current_scene,
             &mut scene_queue,
             &canvas,
@@ -292,17 +300,18 @@ fn draw(
 }
 
 fn update_scene_queue(
+    sdl_context: &sdl2::Sdl,
     current_scene: &mut Box<dyn Scene>,
     scene_queue: &mut VecDeque<Box<dyn Scene>>,
     canvas: &WindowCanvas,
     is_running: &mut bool,
 ) -> Option<(Vec<String>, Vec<String>)> {
     if current_scene.is_done() {
-        let previous_scene_payload = current_scene.on_unload();
+        let previous_scene_payload = current_scene.on_unload(sdl_context);
 
         if !scene_queue.is_empty() {
             *current_scene = scene_queue.pop_front().unwrap();
-            Some(current_scene.on_load(canvas, previous_scene_payload))
+            Some(current_scene.on_load(sdl_context, canvas, previous_scene_payload))
         } else {
             *is_running = false;
 

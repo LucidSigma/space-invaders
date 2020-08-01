@@ -10,12 +10,13 @@ pub trait Scene {
 
     fn on_load(
         &mut self,
+        sdl_context: &sdl2::Sdl,
         canvas: &WindowCanvas,
         previous_scene_payload: Option<i32>,
     ) -> (Vec<String>, Vec<String>);
     fn on_late_load(&mut self, _canvas: &WindowCanvas, _textures: &[Texture], _fonts: &[Font]) {}
 
-    fn on_unload(&mut self) -> Option<i32> {
+    fn on_unload(&mut self, _sdl_context: &sdl2::Sdl) -> Option<i32> {
         None
     }
 

@@ -497,6 +497,7 @@ impl Scene for SpaceScene<'_> {
 
     fn on_load(
         &mut self,
+        sdl_context: &sdl2::Sdl,
         _canvas: &WindowCanvas,
         _previous_scene_payload: Option<i32>,
     ) -> (Vec<String>, Vec<String>) {
@@ -579,6 +580,7 @@ impl Scene for SpaceScene<'_> {
             }
         }
 
+        sdl_context.mouse().show_cursor(false);
         self.music = Some(Music::from_file("assets/sounds/music/Werq.mp3").unwrap());
 
         (textures, fonts)
@@ -605,7 +607,8 @@ impl Scene for SpaceScene<'_> {
         self.music.as_ref().unwrap().play(-1).unwrap();
     }
 
-    fn on_unload(&mut self) -> Option<i32> {
+    fn on_unload(&mut self, sdl_context: &sdl2::Sdl) -> Option<i32> {
+        sdl_context.mouse().show_cursor(true);
         Music::halt();
 
         Some(self.score as i32)

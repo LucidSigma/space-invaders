@@ -109,6 +109,7 @@ impl Scene for GameOverScene<'_> {
 
     fn on_load(
         &mut self,
+        _sdl_context: &sdl2::Sdl,
         _canvas: &WindowCanvas,
         previous_scene_payload: Option<i32>,
     ) -> (Vec<String>, Vec<String>) {
@@ -162,7 +163,7 @@ impl Scene for GameOverScene<'_> {
         self.buttons.push(Button::new(
             canvas.viewport().width() / 2,
             canvas.viewport().height() / 2,
-            450,
+            500,
             125,
             "Play Again",
             0.5,
@@ -179,7 +180,7 @@ impl Scene for GameOverScene<'_> {
         self.buttons.push(Button::new(
             canvas.viewport().width() / 2,
             canvas.viewport().height() / 4 * 3,
-            450,
+            500,
             125,
             "Back to Menu",
             0.5,
