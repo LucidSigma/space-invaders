@@ -192,9 +192,12 @@ fn play_loop(
 
 fn calculate_delta_time(ticks_count: &mut Instant) -> f32 {
     const MICROSECONDS_PER_SECOND: f32 = 1e6;
+    const DELTA_TIME_MAX: f32 = 0.05;
 
     let delta_time = (Instant::now() - *ticks_count).as_micros() as f32 / MICROSECONDS_PER_SECOND;
     *ticks_count = Instant::now();
+
+    let delta_time = f32::min(delta_time, DELTA_TIME_MAX);
 
     delta_time
 }
