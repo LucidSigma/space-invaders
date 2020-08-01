@@ -620,8 +620,20 @@ impl Scene for SpaceScene<'_> {
         } = event
         {
             match window_event {
-                FocusGained | Restored => self.has_window_focus = true,
-                FocusLost | Minimised => self.has_window_focus = false,
+                FocusGained | Restored => {
+                    self.has_window_focus = true;
+
+                    if Music::is_paused() {
+                        Music::resume();
+                    }
+                }
+                FocusLost | Minimised => {
+                    self.has_window_focus = false;
+
+                    if Music::is_playing() {
+                        Music::pause();
+                    }
+                }
                 _ => (),
             }
         }

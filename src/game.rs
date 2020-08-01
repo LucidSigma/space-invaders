@@ -197,9 +197,7 @@ fn calculate_delta_time(ticks_count: &mut Instant) -> f32 {
     let delta_time = (Instant::now() - *ticks_count).as_micros() as f32 / MICROSECONDS_PER_SECOND;
     *ticks_count = Instant::now();
 
-    let delta_time = f32::min(delta_time, DELTA_TIME_MAX);
-
-    delta_time
+    f32::min(delta_time, DELTA_TIME_MAX)
 }
 
 fn poll_events(

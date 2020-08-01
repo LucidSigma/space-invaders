@@ -173,6 +173,31 @@ impl Scene for MainMenuScene<'_> {
         None
     }
 
+    fn poll_event(&mut self, event: sdl2::event::Event) {
+        use sdl2::event::Event::*;
+        use sdl2::event::WindowEvent::{Minimized as Minimised, *};
+
+        if let Window {
+            win_event: window_event,
+            ..
+        } = event
+        {
+            match window_event {
+                FocusGained | Restored => {
+                    if Music::is_paused() {
+                        Music::resume();
+                    }
+                }
+                FocusLost | Minimised => {
+                    if Music::is_playing() {
+                        Music::pause();
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
     fn process_input(&mut self, input_state: &InputState) {
         if input_state.is_key_down(Scancode::Escape) {
             self.is_done = true;
