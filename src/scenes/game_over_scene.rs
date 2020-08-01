@@ -3,6 +3,7 @@ use std::fs;
 
 use sdl2::keyboard::Scancode;
 use sdl2::pixels::Color as Colour;
+use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, TextureCreator, WindowCanvas};
 use sdl2::ttf::Font;
 
@@ -27,6 +28,37 @@ impl GameOverScene {
 			font_index: 0,
 		}
 	}
+
+	fn draw_header(
+        &self,
+        canvas: &mut WindowCanvas,
+        texture_creator: &TextureCreator<sdl2::video::WindowContext>,
+        font: &Font,
+    ) {
+		const TEXT_SCALE: f32 = 0.75;
+
+        let title_text = font
+            .render("Game Over!")
+            .solid(Colour::RGB(255, 255, 255))
+            .unwrap();
+        let title_texture = texture_creator
+            .create_texture_from_surface(title_text)
+            .unwrap();
+
+        let title_texture_data = title_texture.query();
+
+        canvas
+            .copy(
+                &title_texture,
+                None,
+                Rect::from_center(
+                    Point::new(canvas.viewport().width() as i32 / 2, 128),
+                    (title_texture_data.width as f32 * TEXT_SCALE) as u32,
+                    (title_texture_data.height as f32 * TEXT_SCALE) as u32,
+                ),
+            )
+            .unwrap();
+    }
 }
 
 impl Scene for GameOverScene {
@@ -92,6 +124,8 @@ impl Scene for GameOverScene {
         fonts: &[Font],
     ) {
 		canvas.set_draw_color(BACKGROUND_COLOUR);
-        canvas.clear();
+		canvas.clear();
+		
+		self.draw_header(canvas, texture_creator, &fonts[self.font_index]);
 	}
 }
