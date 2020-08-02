@@ -76,6 +76,7 @@ fn initialise_sdl() -> Result<
         mixer::DEFAULT_CHANNELS,
         1024,
     )?;
+
     let ttf_context = ttf::init().unwrap();
     let video_subsystem = sdl_context.video()?;
 

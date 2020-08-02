@@ -22,6 +22,7 @@ use crate::scenes::game_over_scene::GameOverScene;
 use crate::scenes::main_menu_scene::MainMenuScene;
 
 const BACKGROUND_COLOUR: Colour = Colour::RGB(10, 10, 10);
+const BACKGROUND_VELOCITY: f32 = 400.0;
 
 const INITIAL_PLAYER_LIVES: u32 = 3;
 const LEVEL_RESET_TIME: f32 = 1.0;
@@ -41,6 +42,8 @@ pub struct SpaceScene<'a> {
     alien_data: AlienData,
     aliens: Vec<Alien>,
 
+    background_offset: f32,
+    background_texture_index: usize,
     font_index: usize,
 
     level_win_sound: Option<Chunk>,
@@ -95,6 +98,9 @@ impl<'a> SpaceScene<'a> {
                 pass_sound: None,
                 shift_sound: None,
             },
+
+            background_offset: 0.0,
+            background_texture_index: 0,
             font_index: 0,
             aliens: vec![],
             level_win_sound: None,
@@ -338,6 +344,40 @@ impl<'a> SpaceScene<'a> {
         }
     }
 
+    fn update_background(&mut self, delta_time: f32, canvas: &WindowCanvas) {
+        self.background_offset += delta_time * BACKGROUND_VELOCITY;
+
+        if self.background_offset > canvas.viewport().height() as f32 {
+            self.background_offset -= canvas.viewport().height() as f32;
+        }
+    }
+
+    fn draw_background(&self, canvas: &mut WindowCanvas, background_texture: &Texture) {
+        let background_texture_data = background_texture.query();
+
+        let background_rect = Rect::new(
+            0,
+            self.background_offset as i32,
+            background_texture_data.width,
+            background_texture_data.height,
+        );
+
+        canvas
+            .copy(background_texture, None, background_rect)
+            .unwrap();
+
+        let background_rect = Rect::new(
+            0,
+            self.background_offset as i32 - background_texture_data.height as i32,
+            background_texture_data.width,
+            background_texture_data.height,
+        );
+
+        canvas
+            .copy(background_texture, None, background_rect)
+            .unwrap();
+    }
+
     fn draw_bullets(
         &self,
         canvas: &mut WindowCanvas,
@@ -519,6 +559,7 @@ impl Scene for SpaceScene<'_> {
                 "bullet.png" => self.spaceship.bullet_data.texture_index = current_index,
                 "alien.png" => self.alien_data.texture_index = current_index,
                 "alien_bullet.png" => self.alien_data.bullet_data.texture_index = current_index,
+                "background.png" => self.background_texture_index = current_index,
                 _ => (),
             }
 
@@ -669,6 +710,7 @@ impl Scene for SpaceScene<'_> {
         if self.level_reset_timeout <= 0.0 {
             self.update_spaceship(delta_time, canvas, sound_channel);
             self.update_aliens(delta_time, canvas, sound_channel);
+            self.update_background(delta_time, canvas);
 
             let bullet_delete_threshold = -2.0 * self.spaceship.bullet_data.height as f32;
             self.spaceship
@@ -734,6 +776,7 @@ impl Scene for SpaceScene<'_> {
         canvas.set_draw_color(BACKGROUND_COLOUR);
         canvas.clear();
 
+        self.draw_background(canvas, &textures[self.background_texture_index]);
         self.draw_bullets(
             canvas,
             &textures[self.spaceship.bullet_data.texture_index],
