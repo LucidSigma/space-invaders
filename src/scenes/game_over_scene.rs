@@ -50,7 +50,7 @@ impl<'a> GameOverScene<'a> {
     ) {
         const TEXT_SCALE: f32 = 0.75;
 
-        let title_text = font.render("Game Over!").solid(Colour::WHITE).unwrap();
+        let title_text = font.render("Game Over!").blended(Colour::WHITE).unwrap();
         let title_texture = texture_creator
             .create_texture_from_surface(title_text)
             .unwrap();
@@ -80,7 +80,7 @@ impl<'a> GameOverScene<'a> {
 
         let title_text = font
             .render(format!("Your final score was {}.", self.player_score).as_str())
-            .solid(Colour::YELLOW)
+            .blended(Colour::YELLOW)
             .unwrap();
         let title_texture = texture_creator
             .create_texture_from_surface(title_text)

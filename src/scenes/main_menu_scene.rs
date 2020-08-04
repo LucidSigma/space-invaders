@@ -48,7 +48,10 @@ impl<'a> MainMenuScene<'a> {
         texture_creator: &TextureCreator<sdl2::video::WindowContext>,
         font: &Font,
     ) {
-        let title_text = font.render("Space Invaders!").solid(Colour::WHITE).unwrap();
+        let title_text = font
+            .render("Space Invaders!")
+            .blended(Colour::WHITE)
+            .unwrap();
         let title_texture = texture_creator
             .create_texture_from_surface(title_text)
             .unwrap();

@@ -438,7 +438,7 @@ impl<'a> SpaceScene<'a> {
 
         let lives_text = font
             .render(format!("Lives: {}", self.player_lives).as_str())
-            .solid(Colour::RED)
+            .blended(Colour::RED)
             .unwrap();
         let lives_texture = texture_creator
             .create_texture_from_surface(lives_text)
@@ -460,7 +460,7 @@ impl<'a> SpaceScene<'a> {
 
         let level_text = font
             .render(format!("Level: {}", self.current_level).as_str())
-            .solid(Colour::WHITE)
+            .blended(Colour::WHITE)
             .unwrap();
         let level_texture = texture_creator
             .create_texture_from_surface(level_text)
@@ -482,7 +482,7 @@ impl<'a> SpaceScene<'a> {
 
         let aliens_text = font
             .render(format!("Aliens: {}", self.aliens.len()).as_str())
-            .solid(Colour::GREEN)
+            .blended(Colour::GREEN)
             .unwrap();
         let aliens_texture = texture_creator
             .create_texture_from_surface(aliens_text)
@@ -506,7 +506,7 @@ impl<'a> SpaceScene<'a> {
 
         let score_text = font
             .render(format!("Score: {}", self.score).as_str())
-            .solid(Colour::YELLOW)
+            .blended(Colour::YELLOW)
             .unwrap();
         let score_texture = texture_creator
             .create_texture_from_surface(score_text)
